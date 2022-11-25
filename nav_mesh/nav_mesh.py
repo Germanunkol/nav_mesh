@@ -62,11 +62,12 @@ class NavMesh():
     def find_full_path( self, start_node, end_node ):
         start_high_level_node = self.rooms[start_node.room_id].node
         end_high_level_node = self.rooms[end_node.room_id].node
-        
-        #print("Searching for path from, to:", start_high_level_node, end_high_level_node )
+
+        print("Searching for path from, to:", start_high_level_node, end_high_level_node )
         high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
-    
-        #print("Found high level path:", len(high_level_path) )
+   
+        print("high level", high_level_path)
+        print("Found high level path:", len(high_level_path) )
         
         #a_star.path_to_mesh( high_level_path )
 
@@ -161,9 +162,20 @@ class NavMesh():
 
         return high_level_path, low_level_path
     
+    def find_random_path( self ):
+        start_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
+        end_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
+        path = self.find_full_path( start_node, end_node )
+        return path
+
     def __setstate__( self, state ):
         self.__dict__ = state
         self.init_kd_tree()
+
+    def save_to_file( self, filename = "nav_mesh.pickle" ):
+        with open( filename, "wb" ) as f:
+            pickle.dump( self, f )
+            print("Saved nav_mesh as:", filename)
        
     @staticmethod
     def load_from_file( filename ):
@@ -173,34 +185,4 @@ class NavMesh():
             nav_mesh = pickle.load( f )
             print( "\tNavMesh loaded." )
         return nav_mesh
-
-    def find_random_path( self ):
-        start_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
-        end_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
-        path = self.find_full_path( start_node, end_node )
-        return path
-
-if __name__ == "__main__":
-    
-    filename = "nav_mesh.pickle"    # TODO: add path?
-    with open( filename, "rb" ) as f:
-        nav_mesh = pickle.load( f )
-        
-    import time, random
-    
-    start_time = time.time()
-    num_runs = 1
-    
-    import nav_mesh_factory
-    nav_mesh_factory.create_high_level_mesh( nav_mesh )
-    
-    for i in range(num_runs):
-        # Test A* path finding:
-        start_node = nav_mesh.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
-        end_node = nav_mesh.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
-    
-        nav_mesh.find_full_path( start_node, end_node )
-        
-    print("Average time: ", (time.time() - start_time)/num_runs )
-
 

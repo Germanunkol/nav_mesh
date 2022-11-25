@@ -20,6 +20,7 @@ import bpy, bmesh
 import os, sys, random
 import numpy as np
 import math
+import time
 
 dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
@@ -75,17 +76,17 @@ class NavRoomInterface():
     
     def calculate_entrances( self ):
         
-        print(f"Searching for entrances between rooms {self.interface_id}")
-        if self.interface_id == "(156, 162)":
-            print("==========================================\nDEBUG!")
+        #print(f"Searching for entrances between rooms {self.interface_id}")
+        #if self.interface_id == "(156, 162)":
+            #print("==========================================\nDEBUG!")
         self.entrances = []
         
         nodes = self.nodes.copy()       # Will get modified, so make a copy!
         
-        for n in nodes:
-            print(n.index, n.room_id)
-            print( "\tsame level", [neigh.index for neigh in n.direct_neighbors])
-            print( "\tnext level", [neigh.index for neigh in n.next_level_neighbors])
+        #for n in nodes:
+            #print(n.index, n.room_id)
+            #print( "\tsame level", [neigh.index for neigh in n.direct_neighbors])
+            #print( "\tnext level", [neigh.index for neigh in n.next_level_neighbors])
 
         while len(nodes) > 0:
             
@@ -94,7 +95,7 @@ class NavRoomInterface():
             front = [node]
             entrance_nodes = []
             
-            print("start node:", node.index)
+            #print("start node:", node.index)
             
             # Find other vertices belonging to the same entrance:
             while len( front ) > 0:
@@ -104,23 +105,23 @@ class NavRoomInterface():
                 
                 to_remove = set()         # New neighbors which are to be added to the front
                 for neighbor in node.direct_neighbors:
-                    print("direct neighbor:", neighbor.index)
+                    #print("direct neighbor:", neighbor.index)
                     if neighbor in nodes:
-                        print("\tin")
+                        #print("\tin")
                         front.append( neighbor )
                         to_remove.add( neighbor )
                 for neighbor in node.next_level_neighbors:
-                    print("next_level neighbor:", neighbor.index)
+                    #print("next_level neighbor:", neighbor.index)
                     if neighbor in nodes:
-                        print("\tin")
+                        #print("\tin")
                         front.append( neighbor )
                         to_remove.add( neighbor )
                 
                 for n in to_remove:
                     nodes.remove( n )
                 
-            print(f"\tFound entrance, num verts: {len(entrance_nodes)}")
-            print("\t", [n.index for n in entrance_nodes])
+            #print(f"\tFound entrance, num verts: {len(entrance_nodes)}")
+            #print("\t", [n.index for n in entrance_nodes])
             self.entrances.append( nav_room_entrance.NavRoomEntrance( self.interface_id[0], self.interface_id[1], entrance_nodes ) )
             if len( entrance_nodes ) == 1 and len(self.nodes) == 3:
                 dsa = adre
@@ -139,27 +140,6 @@ class NavRoomInterface():
 #            return NavRoomInterface.all_interfaces[interface_id]
 #        else:
 #            return NavRoomInterface( room_id_1, room_id_2 )
-    
-def verts_to_nodes( verts, assigned_rooms, heights ):
-    
-    verts.ensure_lookup_table()
-    
-    nodes = []
-    for i, v in enumerate( verts ):
-        node = nav_node.NavNode(np.array(v.co), v.index, assigned_rooms[v.index],
-                normal=np.array(v.normal), max_height=heights[i] )
-        nodes.append( node )
-    
-    for i, v in enumerate( verts ):
-        node = nodes[i]
-        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):
-            if assigned_rooms[v.index] == assigned_rooms[n.index]:
-                node.add_direct_neighbor( nodes[n.index] )
-            else:
-                node.add_next_level_neighbor( nodes[n.index] )
-                
-    return nodes
-
 def create_nav_mesh( nodes, num_rooms ):
     
     nav = nav_mesh.NavMesh( nodes, num_rooms )
@@ -173,6 +153,9 @@ def create_nav_mesh( nodes, num_rooms ):
     # assigned to the room:
     for i,node in enumerate( nodes ):
         room_nodes[node.room_id].append( node )
+       
+    #for room_id in range(num_rooms):
+    #    print(f"found {len(room_nodes[room_id])} nodes for room {room_id}")
         
     ##self.allverts = numpy.empty( (num_verts,4) )
     
@@ -250,6 +233,9 @@ def create_high_level_mesh( nav_mesh ):
     node_list_sorted = sorted( node_list, key=lambda x: x.index )  # sort by index
     print( "number of rooms:", len(nav_mesh.rooms))
     print( "number of entrances:", len(nav_mesh.entrances))
+    print( "room nodes:" )
+    for n in node_list:
+        print("\t", n)
     
     for node in node_list_sorted:
         bm.verts.new( node.pos )
@@ -275,8 +261,6 @@ def create_high_level_mesh( nav_mesh ):
 
 
 def test_nav_mesh( nav_mesh ):
-    import time
-    
     start_time = time.time()
     num_runs = 1
     
@@ -344,7 +328,7 @@ def nav_mesh_from_object( obj ):
     bm = bmesh.new()   # create an empty BMesh
     bm.from_mesh(me)   # fill it in from a Mesh
     
-    cube_side_length = 10
+    cube_side_length = 20
     assigned_rooms = cube_clustering.estimate_rooms( bm, cube_side_length )
     
     assigned_rooms, num_rooms = cube_clustering.split_non_connected_rooms( bm, assigned_rooms )
@@ -357,31 +341,43 @@ def nav_mesh_from_object( obj ):
     
     nodes = verts_to_nodes( bm.verts, assigned_rooms, heights )
     
-    
-    nav_mesh = create_nav_mesh( nodes, num_rooms )
-    create_high_level_mesh( nav_mesh )
-    
+    nav = create_nav_mesh( nodes, num_rooms )
+   
+    ######################################
+    ## TODO: Check here!
+    create_high_level_mesh( nav )
+   
     #cube_clustering.create_debug_meshes( bm, assigned_rooms, num_rooms )
+
     bm.free()
     
-    
-    #test_nav_mesh( nav_mesh )
-    
-    import pickle
+    #test_nav_mesh( nav )
     
     filename = os.path.join( os.path.dirname(bpy.data.filepath), "nav_mesh.pickle" )
-    with open( filename, "wb" ) as f:
-        pickle.dump( nav_mesh, f )
-        print("Saved nav_mesh as:", filename)
+    nav.save_to_file( filename )
         
-    print("pickle version", pickle.format_version)
-    with open( filename, "rb" ) as f:
-        nav_mesh_2 = pickle.load( f )
-        print(nav_mesh_2)
+    #print("pickle version", pickle.format_version)
+    #with open( filename, "rb" ) as f:
+    #    nav_mesh_2 = pickle.load( f )
+    #    print(nav_mesh_2)
+
+    return nav
 
 if __name__ == "__main__":
+    import random
     
     obj = bpy.context.object
-    nav_mesh_from_object( obj )
+    nav = nav_mesh_from_object( obj )
     
+    num_runs = 1
+
+    for i in range(num_runs):
+        # Test A* path finding:
+        start_node = nav.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
+        end_node = nav.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
+    
+        high_level_path, low_level_path = nav.find_full_path( start_node, end_node )
+    
+        nav_mesh_factory_utils.path_to_mesh( high_level_path )
+        nav_mesh_factory_utils.path_to_mesh( low_level_path )
         

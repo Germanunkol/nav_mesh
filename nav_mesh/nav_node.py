@@ -4,6 +4,7 @@
 ############################################################
 
 import numpy as np
+import math
 
 class NavNode():
     
@@ -13,7 +14,7 @@ class NavNode():
     node_list = [{},{}]
     
     def __init__( self, pos, index, room_id=None, level=0, normal=None, max_height=0):
-        
+
         # Neighbors of this node which are on the same "level"
         self.__direct_neighbors = set()
         
@@ -57,13 +58,13 @@ class NavNode():
         # through the given entrance.
         # Only call on low-level nodes which are part of an entrance!
         other_room_id = entrance.get_other_room_id( self.room_id )
-        closest_dist_squared = 99999999
+        closest_dist_squared = math.inf
         closest_node = None
         for n in self.next_level_neighbors:
             if n.room_id == other_room_id:
                 #length_squared = ((n.pos - self.pos)**2).sum()
                 squared = (n.pos - self.pos)**2
-                length_squared = squared.x + squared.y + squared.z
+                length_squared = squared.sum()
                 if length_squared < closest_dist_squared:
                     closest_dist_squared = length_squared
                     closest_node = n

@@ -19,6 +19,7 @@
 
 import bpy, bmesh
 import mathutils
+import random
 import numpy as np
 from scipy.spatial import KDTree
 
@@ -84,4 +85,60 @@ def duplicate_object( orig_obj, new_name ):
     bpy.context.collection.objects.link(new_obj)
     return new_obj
 
+def path_to_mesh( nodes ):
+    # Create a path-mesh given a list of nodes. Nodes must be in order!
+        
+    # Get a new object and mesh:
+    name = f"path: {nodes[0].index} -> {nodes[-1].index}"
+    me = bpy.data.meshes.new(name)  # add a new mesh
+    obj = bpy.data.objects.new(name, me)  # add a new object using the mesh
+    col = bpy.context.scene.collection
+    col.objects.link(obj)
 
+    # Get a BMesh representation
+    bm = bmesh.new()   # create an empty BMesh
+    bm.from_mesh(me)   # fill it in from a Mesh
+    
+    for node in nodes:
+        bm.verts.new( node.pos )
+    
+    bm.verts.ensure_lookup_table()
+    for i in range(len(bm.verts)-1):
+        bm.edges.new( (bm.verts[i], bm.verts[i+1]) )
+    
+    # Finish up, write the bmesh back to the mesh
+    bm.to_mesh(me)
+    bm.free()  # free and prevent further access
+
+    
+def verts_to_nodes( verts, assigned_rooms, heights ):
+    
+    verts.ensure_lookup_table()
+    
+    nodes = []
+    for i, v in enumerate( verts ):
+        node = nav_node.NavNode(np.array(v.co), v.index, assigned_rooms[v.index],
+                normal=np.array(v.normal), max_height=heights[i] )
+        nodes.append( node )
+    
+    for i, v in enumerate( verts ):
+        node = nodes[i]
+        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):
+            if assigned_rooms[v.index] == assigned_rooms[n.index]:
+                node.add_direct_neighbor( nodes[n.index] )
+            else:
+                node.add_next_level_neighbor( nodes[n.index] )
+                
+    return nodes
+
+def test_nav_mesh( mesh ):
+    
+    start_room = random.choice( mesh.rooms )
+    end_room = random.choice( mesh.rooms )
+    start_node = random.choice( start_room.nodes )
+    end_node = random.choice( end_room.nodes )
+
+    high_level_path, low_level_path = mesh.find_full_path( start_node, end_node )
+
+    path_to_mesh( high_level_path )
+    path_to_mesh( low_level_path )

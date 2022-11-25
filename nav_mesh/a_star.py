@@ -6,21 +6,6 @@ import bpy
 import math
 import bisect # for inserting into sorted list
 
-dir = os.path.dirname(bpy.data.filepath)
-if not dir in sys.path:
-    sys.path.append(dir)
-  
-import utils
-# this next part forces a reload in case you edit the source after you first start the blender session
-import importlib
-importlib.reload(utils)
-    
-#    def __str__( self ):
-#        if self.parent_node:
-#            return f"{self.vert.index} (parent: {self.parent_node.vert.index}) (g: {self.g}, h: {self.h}, f: {self.f})"
-#        else:
-#            return f"{self.vert.index} (parent: none) (g: {self.g}, h: {self.h}, f: {self.f})"
-    
 def heuristic( node, end_nodes ):
     min_val = np.inf
     for end in end_nodes:
@@ -107,33 +92,6 @@ def a_star( start_node, end_nodes, verbose=False ):
     if verbose:
         print("\tNo path found.")
     return None
-
-def path_to_mesh( nodes ):
-    
-    import bmesh
-    # Create a path-mesh given a list of verts. Verts must be in order!
-        
-    # Get a new object and mesh:
-    name = "path: {verts[0].index} -> {verts[-1].index}"
-    me = bpy.data.meshes.new(name)  # add a new mesh
-    obj = bpy.data.objects.new(name, me)  # add a new object using the mesh
-    col = bpy.context.scene.collection
-    col.objects.link(obj)
-
-    # Get a BMesh representation
-    bm = bmesh.new()   # create an empty BMesh
-    bm.from_mesh(me)   # fill it in from a Mesh
-    
-    for node in nodes:
-        bm.verts.new( node.pos )
-    
-    bm.verts.ensure_lookup_table()
-    for i in range(len(bm.verts)-1):
-        bm.edges.new( (bm.verts[i], bm.verts[i+1]) )
-    
-    # Finish up, write the bmesh back to the mesh
-    bm.to_mesh(me)
-    bm.free()  # free and prevent further access
 
 if __name__ == "__main__":
     
