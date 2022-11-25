@@ -3,6 +3,7 @@ from sklearn.mixture import GaussianMixture
 
 import numpy as np
 import random
+import math
 import bpy, bmesh
 import os, sys
 import time
@@ -27,15 +28,15 @@ def cube_clustering( verts, cube_side_length ):
     room_ids = {}
     
     for vert_index,v in enumerate(verts):
-        ix = int(v.co.x/cube_side_length)
-        iy = int(v.co.y/cube_side_length)
-        iz = int(v.co.z/cube_side_length)
+        ix = math.floor(v.co.x/cube_side_length)
+        iy = math.floor(v.co.y/cube_side_length)
+        iz = math.floor(v.co.z/cube_side_length)
         index = f"{ix}_{iy}_{iz}"
         if not index in room_ids:
             room_ids[index] = len(room_ids)
             
         assigned_room_ids[vert_index] = room_ids[index]
-        
+
     return assigned_room_ids
 
 
