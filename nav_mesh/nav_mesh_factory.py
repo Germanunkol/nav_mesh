@@ -7,17 +7,26 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append( dir )
     
-import cube_clustering
-import navmesh
+from . import cube_clustering
+from . import nav_mesh
+from . import nav_node
+from . import nav_room
+from . import nav_room_entrance
 import utils
-import navmesh_utils
+from . import nav_mesh_utils
 
-# this next part forces a reload in case you edit the source after you first start the blender session:
+# Re-load all modules. This is only necessary when running the scripts from within blender,
+# where modules already loaded from a previous run need to be re-loaded in case the scripts
+# changed since the last run. The 'import' statements above aren't sufficient for this,
+# because python/blender caches the modules.
 import importlib
 importlib.reload(cube_clustering)
-importlib.reload(navmesh)
+importlib.reload(nav_mesh)
+importlib.reload(nav_node)
+importlib.reload(nav_room)
+importlib.reload(nav_room_entrance)
 importlib.reload(utils)
-importlib.reload(navmesh_utils)
+importlib.reload(nav_mesh_utils)
 
 
 class NavRoomInterface():
@@ -96,7 +105,7 @@ class NavRoomInterface():
                 
             print(f"\tFound entrance, num verts: {len(entrance_nodes)}")
             print("\t", [n.index for n in entrance_nodes])
-            self.entrances.append( navmesh.NavRoomEntrance( self.interface_id[0], self.interface_id[1], entrance_nodes ) )
+            self.entrances.append( nav_room_entrance.NavRoomEntrance( self.interface_id[0], self.interface_id[1], entrance_nodes ) )
             if len( entrance_nodes ) == 1 and len(self.nodes) == 3:
                 dsa = adre
         
@@ -121,7 +130,7 @@ def verts_to_nodes( verts, assigned_rooms, heights ):
     
     nodes = []
     for i, v in enumerate( verts ):
-        node = navmesh.NavNode(np.array(v.co), v.index, assigned_rooms[v.index],
+        node = nav_node.NavNode(np.array(v.co), v.index, assigned_rooms[v.index],
                 normal=np.array(v.normal), max_height=heights[i] )
         nodes.append( node )
     
@@ -135,9 +144,9 @@ def verts_to_nodes( verts, assigned_rooms, heights ):
                 
     return nodes
 
-def create_navmesh( nodes, num_rooms ):
+def create_nav_mesh( nodes, num_rooms ):
     
-    nav_mesh = navmesh.NavMesh( nodes, num_rooms )
+    nav = nav_mesh.NavMesh( nodes, num_rooms )
     
     # Create list of nodes for each "room":
     room_nodes = {}
@@ -157,8 +166,8 @@ def create_navmesh( nodes, num_rooms ):
     for room_id in range(num_rooms):
         
         # Create room for the vertices:
-        room = navmesh.NavRoom( room_id=room_id, nodes=room_nodes[room_id] )
-        nav_mesh.add_room( room )
+        room = nav_room.NavRoom( room_id=room_id, nodes=room_nodes[room_id] )
+        nav.add_room( room )
         
         room.create_center_node( index=high_level_node_index )
         high_level_node_index += 1
@@ -183,8 +192,8 @@ def create_navmesh( nodes, num_rooms ):
         interface.calculate_entrances()
         # Add a pointer to this entrance to all the rooms it connects:
         for entrance in interface.entrances:
-            room_1 = nav_mesh.rooms[entrance.room_id_1]
-            room_2 = nav_mesh.rooms[entrance.room_id_2]
+            room_1 = nav.rooms[entrance.room_id_1]
+            room_2 = nav.rooms[entrance.room_id_2]
             
             room_1.add_entrance( entrance )
             room_2.add_entrance( entrance )
@@ -198,9 +207,9 @@ def create_navmesh( nodes, num_rooms ):
             entrance.node.add_direct_neighbor( room_1.node )
             entrance.node.add_direct_neighbor( room_2.node )
             
-            nav_mesh.add_entrance( entrance )
+            nav.add_entrance( entrance )
             
-    return nav_mesh
+    return nav
 
 def create_high_level_mesh( nav_mesh ):
     
@@ -249,7 +258,7 @@ def create_high_level_mesh( nav_mesh ):
     bm.free()  # free and prevent further access
 
 
-def test_navmesh( nav_mesh ):
+def test_nav_mesh( nav_mesh ):
     import time
     
     start_time = time.time()
@@ -310,7 +319,7 @@ def add_skip_connections( obj ):
     
     bm.to_mesh(obj.data)
     
-def navmesh_from_object( obj ):
+def nav_mesh_from_object( obj ):
     obj = utils.duplicate_object( obj, "NavMesh_source" )
     add_skip_connections( obj )
     me = obj.data
@@ -324,30 +333,30 @@ def navmesh_from_object( obj ):
     
     assigned_rooms, num_rooms = cube_clustering.split_non_connected_rooms( bm, assigned_rooms )
     
-    heights = navmesh_utils.calculate_max_node_heights( bm )
-    #navmesh_utils.visualize_max_node_heights( bm, heights )
+    heights = nav_mesh_utils.calculate_max_node_heights( bm )
+    #nav_mesh_utils.visualize_max_node_heights( bm, heights )
     
-    heights = navmesh_utils.smooth_max_node_heights( bm, heights )
-    navmesh_utils.visualize_max_node_heights( bm, heights, "MaxNodeHeights_Smooth" )
+    heights = nav_mesh_utils.smooth_max_node_heights( bm, heights )
+    nav_mesh_utils.visualize_max_node_heights( bm, heights, "MaxNodeHeights_Smooth" )
     
     nodes = verts_to_nodes( bm.verts, assigned_rooms, heights )
     
     
-    nav_mesh = create_navmesh( nodes, num_rooms )
+    nav_mesh = create_nav_mesh( nodes, num_rooms )
     create_high_level_mesh( nav_mesh )
     
     #cube_clustering.create_debug_meshes( bm, assigned_rooms, num_rooms )
     bm.free()
     
     
-    #test_navmesh( nav_mesh )
+    #test_nav_mesh( nav_mesh )
     
     import pickle
     
-    filename = os.path.join( os.path.dirname(bpy.data.filepath), "navmesh.pickle" )
+    filename = os.path.join( os.path.dirname(bpy.data.filepath), "nav_mesh.pickle" )
     with open( filename, "wb" ) as f:
         pickle.dump( nav_mesh, f )
-        print("Saved navmesh as:", filename)
+        print("Saved nav_mesh as:", filename)
         
     print("pickle version", pickle.format_version)
     with open( filename, "rb" ) as f:
@@ -357,6 +366,6 @@ def navmesh_from_object( obj ):
 if __name__ == "__main__":
     
     obj = bpy.context.object
-    navmesh_from_object( obj )
+    nav_mesh_from_object( obj )
     
         

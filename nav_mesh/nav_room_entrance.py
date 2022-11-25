@@ -1,4 +1,17 @@
 
+from . import nav_node
+from . import nav_mesh_utils
+
+# Re-load all modules. This is only necessary when running the scripts from within blender,
+# where modules already loaded from a previous run need to be re-loaded in case the scripts
+# changed since the last run. The 'import' statements above aren't sufficient for this,
+# because python/blender caches the modules.
+import importlib
+importlib.reload(nav_node)
+importlib.reload(nav_mesh_utils)
+
+
+
 class NavRoomEntrance():
     # Represents a single entrance from one room to another.
     # Note that there may be multiple (disconnected) entrances between the same
@@ -50,7 +63,7 @@ class NavRoomEntrance():
     @property
     def center( self ):
         if not self.mean_point:
-            self.mean_point = mean_node_position( self.nodes )
+            self.mean_point = nav_mesh_utils.mean_node_position( self.nodes )
         return self.mean_point
         
     
@@ -60,7 +73,7 @@ class NavRoomEntrance():
             
     def create_center_node( self, index ):
         if not self.node:
-            self.node = NavNode( self.center, index, level=1, max_height=self.max_height )
+            self.node = nav_node.NavNode( self.center, index, level=1, max_height=self.max_height )
             self.node.entrance = self
             
     def __str__( self ):

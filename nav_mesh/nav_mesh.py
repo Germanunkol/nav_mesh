@@ -6,7 +6,7 @@ import pickle
 import random
 from scipy.spatial import KDTree
 
-import a_star
+from . import a_star
 
 class NavMesh():
     
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     
     import bpy
     
-    filename = os.path.join( os.path.dirname(bpy.data.filepath), "navmesh.pickle" )
+    filename = os.path.join( os.path.dirname(bpy.data.filepath), "nav_mesh.pickle" )
     with open( filename, "rb" ) as f:
         nav_mesh = pickle.load( f )
         
@@ -189,8 +189,8 @@ if __name__ == "__main__":
     start_time = time.time()
     num_runs = 1
     
-    import navmesh_factory
-    navmesh_factory.create_high_level_mesh( nav_mesh )
+    import nav_mesh_factory
+    nav_mesh_factory.create_high_level_mesh( nav_mesh )
     
     for i in range(num_runs):
         # Test A* path finding:

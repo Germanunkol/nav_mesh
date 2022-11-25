@@ -1,4 +1,6 @@
 
+import numpy as np
+
 class NavNode():
     
     # List of all nodes.
@@ -121,7 +123,7 @@ class NavNode():
         
         NavNode.node_list[self.level][self.index] = self
 
-    def getHighPos( self, height, normal=None ):
+    def get_pos_above( self, height, normal=None ):
         if normal:
             return self.pos + normal*height
         else:
