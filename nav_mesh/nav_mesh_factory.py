@@ -1,3 +1,21 @@
+############################################################
+# Copyright (C) 2022 Germanunkol
+# License: GPL v 3
+# 
+# This file is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This file is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+############################################################
+
 import bpy, bmesh
 import os, sys, random
 import numpy as np
@@ -12,8 +30,7 @@ from . import nav_mesh
 from . import nav_node
 from . import nav_room
 from . import nav_room_entrance
-import utils
-from . import nav_mesh_utils
+from . import nav_mesh_factory_utils
 
 # Re-load all modules. This is only necessary when running the scripts from within blender,
 # where modules already loaded from a previous run need to be re-loaded in case the scripts
@@ -25,8 +42,7 @@ importlib.reload(nav_mesh)
 importlib.reload(nav_node)
 importlib.reload(nav_room)
 importlib.reload(nav_room_entrance)
-importlib.reload(utils)
-importlib.reload(nav_mesh_utils)
+importlib.reload(nav_mesh_factory_utils)
 
 
 class NavRoomInterface():
@@ -136,7 +152,7 @@ def verts_to_nodes( verts, assigned_rooms, heights ):
     
     for i, v in enumerate( verts ):
         node = nodes[i]
-        for n in utils.get_neighbor_verts( v ):
+        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):
             if assigned_rooms[v.index] == assigned_rooms[n.index]:
                 node.add_direct_neighbor( nodes[n.index] )
             else:
@@ -296,12 +312,12 @@ def add_skip_connections( obj ):
         pot_conn = set()
         if v.normal.length < 1e-10:
             continue
-        for n in utils.get_neighbor_verts( v ):    
+        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):    
             if n.normal.length < 1e-10:
                 continue
             ang = v.normal.angle( n.normal )
             if ang < math.pi*0.1:            
-                for n2 in utils.get_neighbor_verts( n ):
+                for n2 in nav_mesh_factory_utils.get_neighbor_verts( n ):
                     if n2.normal.length < 1e-10:
                         continue
                     ang2 = v.normal.angle( n2.normal )
@@ -320,7 +336,7 @@ def add_skip_connections( obj ):
     bm.to_mesh(obj.data)
     
 def nav_mesh_from_object( obj ):
-    obj = utils.duplicate_object( obj, "NavMesh_source" )
+    obj = nav_mesh_factory_utils.duplicate_object( obj, "NavMesh_source" )
     add_skip_connections( obj )
     me = obj.data
     
@@ -333,11 +349,11 @@ def nav_mesh_from_object( obj ):
     
     assigned_rooms, num_rooms = cube_clustering.split_non_connected_rooms( bm, assigned_rooms )
     
-    heights = nav_mesh_utils.calculate_max_node_heights( bm )
-    #nav_mesh_utils.visualize_max_node_heights( bm, heights )
+    heights = nav_mesh_factory_utils.calculate_max_node_heights( bm )
+    #nav_mesh_factory_utils.visualize_max_node_heights( bm, heights )
     
-    heights = nav_mesh_utils.smooth_max_node_heights( bm, heights )
-    nav_mesh_utils.visualize_max_node_heights( bm, heights, "MaxNodeHeights_Smooth" )
+    heights = nav_mesh_factory_utils.smooth_max_node_heights( bm, heights )
+    nav_mesh_factory_utils.visualize_max_node_heights( bm, heights, "MaxNodeHeights_Smooth" )
     
     nodes = verts_to_nodes( bm.verts, assigned_rooms, heights )
     

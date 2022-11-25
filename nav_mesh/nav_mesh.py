@@ -1,3 +1,7 @@
+############################################################
+# Copyright (C) 2022 Germanunkol
+# License: MIT
+############################################################
 
 import os, sys, math
 import time
@@ -178,9 +182,7 @@ class NavMesh():
 
 if __name__ == "__main__":
     
-    import bpy
-    
-    filename = os.path.join( os.path.dirname(bpy.data.filepath), "nav_mesh.pickle" )
+    filename = "nav_mesh.pickle"    # TODO: add path?
     with open( filename, "rb" ) as f:
         nav_mesh = pickle.load( f )
         

@@ -1,3 +1,7 @@
+############################################################
+# Copyright (C) 2022 Germanunkol
+# License: MIT
+############################################################
 
 from . import nav_node
 from . import nav_mesh_utils
