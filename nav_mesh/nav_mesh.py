@@ -11,6 +11,8 @@ import random
 from scipy.spatial import KDTree
 
 from . import a_star
+from . import loader
+from . import nav_node
 
 class NavMesh():
     
@@ -172,6 +174,22 @@ class NavMesh():
         self.__dict__ = state
         self.init_kd_tree()
 
+        ####################################
+        # Warning: For some reason, the nodes adding themselves to the NavNode.node_list
+        # no longer works. I suspoect this is due to the renamed_load function, which
+        # does some magic to the imports. Somehow, the nodes add themselves, but after
+        # being imported, only the high-level nodes (node.level == 1) are present, the
+        # other list is somehow empty. I don't know why, but it may be that somehow the
+        # NavNode module is imported twice under different names, and then these different
+        # modules are used? Doesn't explain why there is a state during loading where both
+        # lists seem to be filled correctly, though.
+        # Anyways, adding them here again manually solves the issue:
+        for n in self.nodes:
+            nav_node.NavNode.node_list[n.level][n.index] = n
+        for k, r in self.rooms.items():
+            n = r.node
+            nav_node.NavNode.node_list[n.level][n.index] = n
+
     def save_to_file( self, filename = "nav_mesh.pickle" ):
         with open( filename, "wb" ) as f:
             pickle.dump( self, f )
@@ -182,7 +200,9 @@ class NavMesh():
 
         print("Attempting to load NavMesh from file:", filename)
         with open( filename, "rb" ) as f:
-            nav_mesh = pickle.load( f )
+            #nav_mesh = pickle.load( f )
+            nav_mesh = loader.renamed_load( f, "lib.nav_mesh", "lib.pathfinding" )
             print( "\tNavMesh loaded." )
+            print( "node list:", nav_node.NavNode.node_list )
         return nav_mesh
 

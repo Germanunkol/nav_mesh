@@ -2,7 +2,6 @@ import numpy as np
 from sortedcontainers import SortedList
 
 import os, sys
-import bpy
 import math
 import bisect # for inserting into sorted list
 
@@ -93,30 +92,4 @@ def a_star( start_node, end_nodes, verbose=False ):
         print("\tNo path found.")
     return None
 
-if __name__ == "__main__":
-    
-    import bpy, bmesh, random, time
-    import navmesh
-    
-    ob = bpy.context.object
-    me = ob.data
-    
-    # Get a BMesh representation
-    bm = bmesh.new()   # create an empty BMesh
-    bm.from_mesh(me)   # fill it in from a Mesh
-    
-    bm.verts.ensure_lookup_table()
-    nodes = navmesh.verts_to_nodes( bm.verts, assigned_rooms=[0 for v in bm.verts] )
-    
-    start_time = time.time()
-    num_paths = 10
-    for i in range(num_paths ):
-        start_node = nodes[ random.randint(0,len(nodes)-1) ]
-        end_nodes = [nodes[ random.randint(0,len(nodes)-1) ] for i in range(5)]
-        
-        path = a_star( start_node, end_nodes )
-    print("Average time: ", (time.time() - start_time)/num_paths )
-    
-    path_to_mesh( path )
-    
-    bm.free()
+

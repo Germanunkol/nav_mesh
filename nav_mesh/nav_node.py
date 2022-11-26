@@ -125,8 +125,10 @@ class NavNode():
 #        n = state["normal"]
 #        if type(n) == np.ndarray:
 #            self.__dict__["normal"] = LVector3f( n[0], n[1], n[2] )
-        
         NavNode.node_list[self.level][self.index] = self
+        #print("self.level", self.level, self.index,
+        #        len(NavNode.node_list[self.level]), max(NavNode.node_list[self.level]))
+
 
     def get_pos_above( self, height, normal=None ):
         if normal:
