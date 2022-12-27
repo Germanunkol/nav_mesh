@@ -53,10 +53,9 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
 
     if len( end_nodes ) > max_end_nodes:
         #print( f"reducing end nodes from {len(end_nodes)} to {max_end_nodes}")
-        print("max_height", min( [n.max_height for n in end_nodes] ) )
         valid_end_nodes = [n for n in end_nodes if n.max_height >= max_height]
-        print("end nodes search:", len(end_nodes), len(valid_end_nodes), max_end_nodes)
-        end_nodes = random.sample(valid_end_nodes, max_end_nodes)
+        #end_nodes = random.sample(valid_end_nodes, max_end_nodes)      # TODO: Reenable
+        end_nodes = valid_end_nodes[0:max_end_nodes]
 
     #assert start_node.max_height > max_height, "The given start node for the path search has a max_height which is lower than the given max_height!"
     
@@ -97,7 +96,6 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
         if cur_node in end_nodes:
             if verbose:
                 print("\tTarget node found. Returning path.")
-            print("END NODE FOUND! Iterations:", iterations)
             return backtrack( cur_node )
         
         f_updated = False
