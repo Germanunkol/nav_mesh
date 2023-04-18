@@ -6,7 +6,19 @@
 import numpy as np
 import math
 
-class NavNode():
+class SimpleNavNode():
+    def __init__( self, pos, normal=None, max_height=0):
+        self.pos = pos
+        self.normal = normal
+        self.max_height = max_height
+        self.blocked = False
+    def get_pos_above( self, height, normal=None ):
+        if normal:
+            return self.pos + normal*height
+        else:
+            return self.pos + self.normal*height
+
+class NavNode( SimpleNavNode ):
     
     # List of all nodes.
     # First dictionary holds all low-level nodes by index,
@@ -14,6 +26,8 @@ class NavNode():
     node_list = [{},{}]
     
     def __init__( self, pos, index, room_id=None, level=0, normal=None, max_height=0):
+        super().__init__( self, pos, normal, max_height )
+
 
         # Neighbors of this node which are on the same "level"
         self.__direct_neighbors = set()
@@ -26,14 +40,10 @@ class NavNode():
         
         self.index = index
         self.room_id = room_id
-        self.pos = pos
-        self.normal = normal
-        self.max_height = max_height
         
         self.parent_node_id = -1
         self.g = 0
         self.h = None
-        self.blocked = False
         
         # Only set when this is a high-level node representing an entrance between two rooms:
         self.entrance = None
@@ -129,10 +139,4 @@ class NavNode():
         #print("self.level", self.level, self.index,
         #        len(NavNode.node_list[self.level]), max(NavNode.node_list[self.level]))
 
-
-    def get_pos_above( self, height, normal=None ):
-        if normal:
-            return self.pos + normal*height
-        else:
-            return self.pos + self.normal*height
 

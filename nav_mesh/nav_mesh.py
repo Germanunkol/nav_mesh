@@ -67,7 +67,7 @@ class NavMesh():
         full_high_level_path = None
         
         finder = PathSectionFinder( self, start_node, end_node )
-        print(finder)
+        #print(finder)
         for high_level_path, low_level_path in finder:
             if full_high_level_path is None:
                 full_high_level_path = high_level_path
@@ -75,8 +75,8 @@ class NavMesh():
 
         return full_high_level_path, full_low_level_path
 
-    def find_path_sections( self, start_node, end_node, avoid=[], max_height=0 ):
-        return PathSectionFinder( self, start_node, end_node, avoid, max_height )
+    def find_path_sections( self, start_node, end_node, end_pos=None, avoid=[], max_height=0 ):
+        return PathSectionFinder( self, start_node, end_node, end_pos, avoid, max_height )
 
     def find_path_to_next_entrance( self, start_node, prev_high_level_path ):
         
@@ -151,21 +151,25 @@ class NavMesh():
             #nav_mesh = pickle.load( f )
             nav_mesh = loader.renamed_load( f, "lib.nav_mesh", "lib.pathfinding" )
             print( "\tNavMesh loaded." )
-            print( "node list:", nav_node.NavNode.node_list )
+            #print( "node list:", nav_node.NavNode.node_list )
         return nav_mesh
 
 class PathSectionFinder:
 
-    def __init__( self, nav_mesh, start_node, end_node, avoid=[], max_height=0 ):
+    def __init__( self, nav_mesh, start_node, end_node, end_pos=None, avoid=[], max_height=0 ):
         """ Find a (sub-part of a) path. If start_node and end_node are in the same sector, find
         the full detail-level path. If they are not, find the full high-level path and the detail-
         level path for the first sector.
+
+        If end_pos is given, it is appended to the final low-level-path.
+
         The 'avoid' parameter is an (optional) list of nodes which should be considered blocked"""
 
         self.high_level_path = None
         self.start_node = start_node
         self.end_node = end_node
         self.nav_mesh = nav_mesh
+        self.end_pos = end_pos  # Optional, could be None!
 
         # TODO!!
         self.avoid = avoid
@@ -201,6 +205,17 @@ class PathSectionFinder:
             # entrance on the path and we've reached the last room:
             low_level_path = a_star.a_star( self.cur_start_node, [self.end_node] )
             self.last_section_found = True   # Stop iteration after this
+
+            if self.end_pos:
+                # If an end position is given, we don't want to end at the last node,
+                # but rather on the last position:
+                if len(low_level_path) > 0:
+                    normal = low_level_path[-1].normal
+                else:
+                    normal = LVector3f(0,0,1)
+                temp_end_node = nav_node.SimpleNavNode( self.end_pos, normal=normal )
+                low_level_path.append( temp_end_node )
+                
             return [], low_level_path
 
         high_level_path, low_level_path, next_entrance = \

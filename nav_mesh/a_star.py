@@ -32,7 +32,7 @@ def manhatten( node, end_nodes ):
 def backtrack( final_node ):
     
     path = []
-    
+   
     cur_node = final_node
     while cur_node:
         # insert at beginning of path:
@@ -50,7 +50,6 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
     - max_height: only nodes are allowed to be traversed which have a max_height lower than the
         max_height given here. (TODO)
     """
-
     if len( end_nodes ) > max_end_nodes:
         #print( f"reducing end nodes from {len(end_nodes)} to {max_end_nodes}")
         valid_end_nodes = [n for n in end_nodes if n.max_height >= max_height]
