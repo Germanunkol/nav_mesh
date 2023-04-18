@@ -151,7 +151,6 @@ class NavMesh():
             #nav_mesh = pickle.load( f )
             nav_mesh = loader.renamed_load( f, "lib.nav_mesh", "lib.pathfinding" )
             print( "\tNavMesh loaded." )
-            #print( "node list:", nav_node.NavNode.node_list )
         return nav_mesh
 
 class PathSectionFinder:
