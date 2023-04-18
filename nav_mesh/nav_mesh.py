@@ -205,15 +205,27 @@ class PathSectionFinder:
             low_level_path = a_star.a_star( self.cur_start_node, [self.end_node] )
             self.last_section_found = True   # Stop iteration after this
 
+            # If an end position is given, we don't want to end at the last node,
+            # but rather on the last position:
             if self.end_pos:
-                # If an end position is given, we don't want to end at the last node,
-                # but rather on the last position:
                 if len(low_level_path) > 0:
                     normal = low_level_path[-1].normal
                 else:
                     normal = LVector3f(0,0,1)
-                temp_end_node = nav_node.SimpleNavNode( self.end_pos, normal=normal )
-                low_level_path.append( temp_end_node )
+                # Create a (temporary) node at the target position which we can add
+                # to the path:
+                tmp_end_node = nav_node.SimpleNavNode( self.end_pos, normal=normal )
+             
+                if len(low_level_path) > 1:
+                    # If the distance to the last path node would be beyond the target position,
+                    # remove this last node:
+                    dist_last_segment = np.linalg.norm(low_level_path[-2].pos - low_level_path[-1].pos)
+                    dist_to_end = np.linalg.norm(tmp_end_node.pos - low_level_path[-1].pos)
+                    if dist_to_end < dist_last_segment:
+                        del low_level_path[-1]
+
+
+                low_level_path.append( tmp_end_node )
                 
             return [], low_level_path
 

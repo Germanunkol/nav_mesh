@@ -8,7 +8,7 @@ import math
 
 class SimpleNavNode():
     def __init__( self, pos, normal=None, max_height=0):
-        self.pos = pos
+        self.pos = np.asarray(pos)
         self.normal = normal
         self.max_height = max_height
         self.blocked = False
