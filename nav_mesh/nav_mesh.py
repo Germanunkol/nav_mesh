@@ -75,10 +75,13 @@ class NavMesh():
 
         return full_high_level_path, full_low_level_path
 
-    def find_path_sections( self, start_node, end_node, end_pos=None, avoid=[], max_height=0 ):
-        return PathSectionFinder( self, start_node, end_node, end_pos, avoid, max_height )
+    def find_path_sections( self, start_node, end_node, end_pos=None, avoid=[], max_height=0,
+            initial_dir = np.asarray((0,0,0)) ):
+        return PathSectionFinder( self, start_node, end_node, end_pos, avoid, max_height,
+                initial_dir )
 
-    def find_path_to_next_entrance( self, start_node, prev_high_level_path ):
+    def find_path_to_next_entrance( self, start_node, prev_high_level_path,
+            initial_dir = np.asarray((0,0,0)) ):
         
         # Find the next entrance along the high level path:
         next_entrance = self.find_next_entrance( prev_high_level_path )
@@ -97,7 +100,7 @@ class NavMesh():
             entrance_nodes = [n for n in next_entrance.nodes \
                     if n.room_id == start_node.room_id]
             # 2. Find the path to one of those:
-            low_level_path = a_star.a_star( start_node, entrance_nodes )
+            low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir )
             
             #a_star.path_to_mesh( low_level_path )
             #print("Found detail level path:", len(low_level_path) )
@@ -155,7 +158,8 @@ class NavMesh():
 
 class PathSectionFinder:
 
-    def __init__( self, nav_mesh, start_node, end_node, end_pos=None, avoid=[], max_height=0 ):
+    def __init__( self, nav_mesh, start_node, end_node, end_pos=None, avoid=[], max_height=0,
+            initial_dir = np.asarray((0,0,0)) ):
         """ Find a (sub-part of a) path. If start_node and end_node are in the same sector, find
         the full detail-level path. If they are not, find the full high-level path and the detail-
         level path for the first sector.
@@ -169,6 +173,7 @@ class PathSectionFinder:
         self.end_node = end_node
         self.nav_mesh = nav_mesh
         self.end_pos = end_pos  # Optional, could be None!
+        self.initial_dir = initial_dir
 
         # TODO!!
         self.avoid = avoid
@@ -202,7 +207,8 @@ class PathSectionFinder:
         if self.cur_start_node.room_id == self.end_node.room_id:
             # This means that there is no further
             # entrance on the path and we've reached the last room:
-            low_level_path = a_star.a_star( self.cur_start_node, [self.end_node] )
+            low_level_path = a_star.a_star( self.cur_start_node, [self.end_node],
+                    initial_dir = self.initial_dir )
             self.last_section_found = True   # Stop iteration after this
 
             # If an end position is given, we don't want to end at the last node,
@@ -231,13 +237,17 @@ class PathSectionFinder:
 
         high_level_path, low_level_path, next_entrance = \
                 self.nav_mesh.find_path_to_next_entrance(
-                    self.cur_start_node, self.high_level_path )
+                    self.cur_start_node, self.high_level_path, self.initial_dir )
 
         if low_level_path:
             # "Jump through" next entrance:
             prev_end_node = low_level_path[-1]
+            exit_pos = prev_end_node.pos
             self.cur_start_node = prev_end_node.get_node_on_other_side( next_entrance )
             self.high_level_path = high_level_path
+            entry_pos = self.cur_start_node.pos
+
+            self.initial_dir = entry_pos - exit_pos
 
             return high_level_path, low_level_path
         else:

@@ -42,7 +42,8 @@ def backtrack( final_node ):
         
     return path
 
-def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max_height=0 ):
+def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max_height=0,
+        initial_dir = np.asarray((0,0,0)) ):
     """
     - start_node: a single node at which to start searching
     - end_nodes: multiple nodes, the path will end at _the closest one_ of these.
@@ -63,7 +64,7 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
         print( "\tto:", [str(n) for n in end_nodes] )
     
     for n in end_nodes:
-        assert n.room_id == start_node.room_id, "Cannot run A* for nodes from separete rooms. room_id must be the same for each node!"
+        assert n.room_id == start_node.room_id, "Cannot run A* for nodes from separate rooms. room_id must be the same for each node!"
     
     assert len( end_nodes ) > 0, "Cannot run A*, end nodes list is empty!"
     
@@ -108,22 +109,26 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
                 # If this is not in the open list, create a new vert and add it to the open list:
                 if not neighbor_node in open_list:
                     h = manhatten( neighbor_node, end_nodes )
+                    #h = eucledian( neighbor_node, end_nodes )
                     neighbor_node.set_heuristic( h )
-                    neighbor_node.set_parent( cur_node ) 
+                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=initial_dir )
+                    neighbor_node.set_parent( cur_node, angle_penalty ) 
                     bisect.insort( open_list, neighbor_node )
                 else:
                     # If node is already on the open list, potentially update:
                     #new_g = cur_node.g + np.linalg.norm(neighbor_node.pos - cur_node.pos)
-                    new_g = cur_node.g + cur_node.dist_to_neighbor( neighbor_node )
+                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=initial_dir )
+                    new_g = cur_node.g + \
+                            cur_node.dist_to_neighbor( neighbor_node ) + \
+                            angle_penalty
                     if neighbor_node.g > new_g:
                         # Remove node, change values, re-add node:
                         open_list.remove( neighbor_node )
                         # WARNING: after the following operation, "open" list may not be sorted
                         # any more!
                         # That's why we removed the node first and then re-add it.
-                        neighbor_node.set_parent( cur_node )
+                        neighbor_node.set_parent( cur_node, angle_penalty=angle_penalty )
                         bisect.insort( open_list, neighbor_node )                        
-
 
     print("NO END NODE FOUND! iterations:", iterations)
     # No path found:

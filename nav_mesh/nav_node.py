@@ -54,15 +54,14 @@ class NavNode( SimpleNavNode ):
     def set_heuristic( self, heuristic ):
         self.h = heuristic
     
-    def set_parent( self, parent_node ):
+    def set_parent( self, parent_node, angle_penalty=0 ):
         if parent_node:
-            self.g = parent_node.g + np.linalg.norm(parent_node.pos - self.pos)
+            self.g = parent_node.g + np.linalg.norm(parent_node.pos - self.pos) + angle_penalty
             self.parent_node_id = parent_node.index
         else:
             self.g = 0      # Distance from start node
             self.parent_node_id = -1
-        
-    
+
     def get_node_on_other_side( self, entrance ):
         # Return the node "opposite" of this node, i.e. the connected node which leads
         # through the given entrance.
@@ -118,6 +117,29 @@ class NavNode( SimpleNavNode ):
 
     def dist_to_neighbor( self, other ):
         return self.__neighbor_dists[other.index]
+
+    def angle_penalty( self, other, max_ang = 0.5*math.pi, initial_dir = np.asarray((0,0,0)) ):
+        """ If we have a parent, penalize tight angles in the path parent->self->other """
+
+        # Determine the incoming direction. If we have a parent, use that direction.
+        # Otherwise, use the given initial_dir.
+        pn = self.parent_node
+        if pn:
+            from_parent = (self.pos - pn.pos)
+        else:
+            from_parent = initial_dir
+
+        # The direction in which we are considering leaving this node:
+        to_other = (other.pos - self.pos)
+
+        # Let the angle between these determine the penalty: Small angles are penalized most:
+        dist_from_parent = np.linalg.norm( from_parent )
+        dist_to_other = np.linalg.norm( to_other )
+        if dist_from_parent > 0 and dist_to_other > 0:
+            ang = math.acos( np.dot( from_parent, to_other )/(dist_from_parent*dist_to_other) )
+            if ang > max_ang:
+                return 1000*ang # Make it very expensive to use this steep ang (but not impossible)
+        return 0    # Fallback
     
     def __str__( self ):
         
