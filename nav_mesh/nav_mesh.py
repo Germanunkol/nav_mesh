@@ -81,7 +81,7 @@ class NavMesh():
                 initial_dir )
 
     def find_path_to_next_entrance( self, start_node, prev_high_level_path,
-            initial_dir = np.asarray((0,0,0)) ):
+            initial_dir = np.asarray((0,0,0)), final_target_node = None ):
         
         # Find the next entrance along the high level path:
         next_entrance = self.find_next_entrance( prev_high_level_path )
@@ -100,7 +100,8 @@ class NavMesh():
             entrance_nodes = [n for n in next_entrance.nodes \
                     if n.room_id == start_node.room_id]
             # 2. Find the path to one of those:
-            low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir )
+            low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
+                    final_target_node = final_target_node )
             
             #a_star.path_to_mesh( low_level_path )
             #print("Found detail level path:", len(low_level_path) )
@@ -237,7 +238,8 @@ class PathSectionFinder:
 
         high_level_path, low_level_path, next_entrance = \
                 self.nav_mesh.find_path_to_next_entrance(
-                    self.cur_start_node, self.high_level_path, self.initial_dir )
+                    self.cur_start_node, self.high_level_path, self.initial_dir,
+                    final_target_node = self.end_node )
 
         if low_level_path:
             # "Jump through" next entrance:

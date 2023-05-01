@@ -43,19 +43,19 @@ def backtrack( final_node ):
     return path
 
 def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max_height=0,
-        initial_dir = np.asarray((0,0,0)) ):
+        initial_dir = np.asarray((0,0,0)), final_target_node=None ):
     """
     - start_node: a single node at which to start searching
-    - end_nodes: multiple nodes, the path will end at _the closest one_ of these.
+    - end_nodes: multiple nodes, the path will end at one of these.
     - avoid: nodes which should be considered "blocked"
     - max_height: only nodes are allowed to be traversed which have a max_height lower than the
         max_height given here. (TODO)
     """
-    if len( end_nodes ) > max_end_nodes:
+    #if len( end_nodes ) > max_end_nodes:
         #print( f"reducing end nodes from {len(end_nodes)} to {max_end_nodes}")
-        valid_end_nodes = [n for n in end_nodes if n.max_height >= max_height]
-        #end_nodes = random.sample(valid_end_nodes, max_end_nodes)      # TODO: Reenable
-        end_nodes = valid_end_nodes[0:max_end_nodes]
+    valid_end_nodes = [n for n in end_nodes if n.max_height >= max_height]
+    #end_nodes = random.sample(valid_end_nodes, max_end_nodes)      # TODO: Reenable?
+    end_nodes = valid_end_nodes[0:max_end_nodes]
 
     #assert start_node.max_height > max_height, "The given start node for the path search has a max_height which is lower than the given max_height!"
     
@@ -76,6 +76,12 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
     
     start_node.set_parent( None )
     bisect.insort( open_list, start_node )
+
+    # If given, steer towards the final target node. Otherwise, steer towards any of the end nodes:
+    if final_target_node:
+        target_nodes_for_heuristic = [final_target_node]
+    else:
+        target_nodes_for_heuristic = end_nodes
     
     iterations = 0
     while len(open_list) > 0:
@@ -108,7 +114,7 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
                 
                 # If this is not in the open list, create a new vert and add it to the open list:
                 if not neighbor_node in open_list:
-                    h = manhatten( neighbor_node, end_nodes )
+                    h = eucledian( neighbor_node, target_nodes_for_heuristic )
                     #h = eucledian( neighbor_node, end_nodes )
                     neighbor_node.set_heuristic( h )
                     angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=initial_dir )
