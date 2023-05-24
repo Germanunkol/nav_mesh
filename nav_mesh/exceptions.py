@@ -1,0 +1,3 @@
+class PathUnreachableError( Exception ):
+    pass
+
