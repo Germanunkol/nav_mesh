@@ -25,27 +25,29 @@ class NavNode( SimpleNavNode ):
     # second dictionary holds all high-level nodes by index
     node_list = [{},{}]
     
-    def __init__( self, pos, index, room_id=None, level=0, normal=None, max_height=0):
-        super().__init__( self, pos, normal, max_height )
-
+    def __init__( self, pos, index, zone_id=None, level=0, normal=None, max_height=0):
+        SimpleNavNode.__init__( self, pos, normal, max_height )
 
         # Neighbors of this node which are on the same "level"
         self.__direct_neighbors = set()
         
-        # Neighbors of this node which are not in the same room, i.e. links/entrances to another room
+        # Neighbors of this node which are not in the same zone, i.e. links/entrances to another zone
         self.__next_level_neighbors = set()
 
         # Distances to each neighbor:
         self.__neighbor_dists = {}
         
         self.index = index
-        self.room_id = room_id
+        self.zone_id = zone_id
+        self.pos = pos
+        self.normal = normal
+        self.max_height = max_height
         
         self.parent_node_id = -1
         self.g = 0
         self.h = None
         
-        # Only set when this is a high-level node representing an entrance between two rooms:
+        # Only set when this is a high-level node representing an entrance between two zones:
         self.entrance = None
         
         self.level = level
@@ -66,11 +68,11 @@ class NavNode( SimpleNavNode ):
         # Return the node "opposite" of this node, i.e. the connected node which leads
         # through the given entrance.
         # Only call on low-level nodes which are part of an entrance!
-        other_room_id = entrance.get_other_room_id( self.room_id )
+        other_zone_id = entrance.get_other_zone_id( self.zone_id )
         closest_dist_squared = math.inf
         closest_node = None
         for n in self.next_level_neighbors:
-            if n.room_id == other_room_id:
+            if n.zone_id == other_zone_id:
                 #length_squared = ((n.pos - self.pos)**2).sum()
                 squared = (n.pos - self.pos)**2
                 length_squared = squared.sum()
@@ -147,7 +149,7 @@ class NavNode( SimpleNavNode ):
         
         direct_neighbors = [n for n in self.direct_neighbors]
         next_level_neighbors = [n for n in self.next_level_neighbors]
-        return f"Node: {self.index}, room ID: {self.room_id}, ({self.pos}), (direct: {len(direct_neighbors)}, next-level: {len(next_level_neighbors)})"
+        return f"Node: {self.index}, zone ID: {self.zone_id}, ({self.pos}), (direct: {len(direct_neighbors)}, next-level: {len(next_level_neighbors)})"
     
     def __setstate__( self, state ):
         self.__dict__ = state

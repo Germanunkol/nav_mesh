@@ -22,6 +22,7 @@ import mathutils
 import random
 import numpy as np
 from scipy.spatial import KDTree
+from . import nav_node
 
 def smooth_max_node_heights( bm, heights ):
     positions = np.empty( (len(bm.verts),3) )
@@ -87,6 +88,8 @@ def duplicate_object( orig_obj, new_name ):
 
 def path_to_mesh( nodes ):
     # Create a path-mesh given a list of nodes. Nodes must be in order!
+
+    print(f"Turning path to mesh: {len(nodes)} nodes")
         
     # Get a new object and mesh:
     name = f"path: {nodes[0].index} -> {nodes[-1].index}"
@@ -123,7 +126,7 @@ def verts_to_nodes( verts, assigned_rooms, heights ):
     
     for i, v in enumerate( verts ):
         node = nodes[i]
-        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):
+        for n in get_neighbor_verts( v ):
             if assigned_rooms[v.index] == assigned_rooms[n.index]:
                 node.add_direct_neighbor( nodes[n.index] )
             else:

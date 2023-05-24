@@ -2,7 +2,7 @@
 # Copyright (C) 2022 Germanunkol
 # License: MIT
 ############################################################
-
+import numpy as np
 def mean_node_position( nodes ):
     
     mean_point = np.array((0.0,0.0,0.0))

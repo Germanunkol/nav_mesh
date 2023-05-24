@@ -17,11 +17,11 @@ from .exceptions import PathUnreachableError
 
 class NavMesh():
     
-    def __init__( self, nodes, num_rooms ):
+    def __init__( self, nodes, num_zones ):
         
         num_nodes = len(nodes)
         self.nodes = nodes
-        self.rooms = {}
+        self.zones = {}
         self.entrances = []
         
         #self.init_kd_tree()
@@ -38,8 +38,8 @@ class NavMesh():
         dist, index = self.kd_tree.query( (pos.x, pos.y, pos.z) )
         return self.nodes[index]
     
-    def add_room( self, room ):
-        self.rooms[room.room_id] = room
+    def add_zone( self, zone ):
+        self.zones[zone.zone_id] = zone
         
     def add_entrance( self, entrance ):
         self.entrances.append( entrance )
@@ -68,7 +68,6 @@ class NavMesh():
         full_high_level_path = None
         
         finder = PathSectionFinder( self, start_node, end_node )
-        #print(finder)
         for high_level_path, low_level_path in finder:
             if full_high_level_path is None:
                 full_high_level_path = high_level_path
@@ -96,10 +95,10 @@ class NavMesh():
             #print("Next entrance:", next_entrance)l
            
             # Find path to the entrance:
-            # 1. Choose the nodes which are part of the current room and part of the entrance
-            # to the next room:
+            # 1. Choose the nodes which are part of the current zone and part of the entrance
+            # to the next zone:
             entrance_nodes = [n for n in next_entrance.nodes \
-                    if n.room_id == start_node.room_id]
+                    if n.zone_id == start_node.zone_id]
             # 2. Find the path to one of those:
             low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
                     final_target_node = final_target_node, min_height=min_height )
@@ -139,7 +138,7 @@ class NavMesh():
         # Anyways, adding them here again manually solves the issue:
         for n in self.nodes:
             nav_node.NavNode.node_list[n.level][n.index] = n
-        for k, r in self.rooms.items():
+        for k, r in self.zones.items():
             n = r.node
             nav_node.NavNode.node_list[n.level][n.index] = n
 
@@ -184,9 +183,9 @@ class PathSectionFinder:
         self.last_section_found = False
 
         # need to cross at least one entrance to another sector?
-        if self.start_node.room_id != self.end_node.room_id: 
-            start_high_level_node = self.nav_mesh.rooms[self.start_node.room_id].node
-            end_high_level_node = self.nav_mesh.rooms[self.end_node.room_id].node
+        if self.start_node.zone_id != self.end_node.zone_id: 
+            start_high_level_node = self.nav_mesh.zones[self.start_node.zone_id].node
+            end_high_level_node = self.nav_mesh.zones[self.end_node.zone_id].node
             
             high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
                     #min_height = self.min_height )
@@ -198,22 +197,18 @@ class PathSectionFinder:
             self.cur_start_node = self.start_node
          
         else:   # start and end in same sector
-            self.high_level_path = []        # TODO: Maybe return room node instead?
+            self.high_level_path = []        # TODO: Maybe return zone node instead?
             self.cur_start_node = self.start_node
 
     def __next__( self ):
 
-        print("\tnext 1")
-
         # End iteration:
         if self.last_section_found:
-            print("\tnext 2")
             raise StopIteration()
 
-        if self.cur_start_node.room_id == self.end_node.room_id:
-            print("\tnext 3")
+        if self.cur_start_node.zone_id == self.end_node.zone_id:
             # This means that there is no further
-            # entrance on the path and we've reached the last room:
+            # entrance on the path and we've reached the last zone:
             low_level_path = a_star.a_star( self.cur_start_node, [self.end_node],
                     initial_dir = self.initial_dir, min_height = self.min_height )
             self.last_section_found = True   # Stop iteration after this
@@ -221,7 +216,6 @@ class PathSectionFinder:
             # If an end position is given, we don't want to end at the last node,
             # but rather on the last position:
             if self.end_pos:
-                print("\tnext 4")
                 if len(low_level_path) > 0:
                     normal = low_level_path[-1].normal
                 else:
@@ -231,32 +225,25 @@ class PathSectionFinder:
                 tmp_end_node = nav_node.SimpleNavNode( self.end_pos, normal=normal )
              
                 if len(low_level_path) > 1:
-                    print("\tnext 5")
                     # If the distance to the last path node would be beyond the target position,
                     # remove this last node:
                     dist_last_segment = np.linalg.norm(low_level_path[-2].pos - low_level_path[-1].pos)
                     dist_to_end = np.linalg.norm(tmp_end_node.pos - low_level_path[-1].pos)
                     if dist_to_end < dist_last_segment:
-                        print("\tnext 6")
                         del low_level_path[-1]
 
-                print("\tnext 7")
 
                 low_level_path.append( tmp_end_node )
                 
-            print("\tnext 8")
 
             return [], low_level_path
 
-        print("\tnext 9")
         high_level_path, low_level_path, next_entrance = \
                 self.nav_mesh.find_path_to_next_entrance(
                     self.cur_start_node, self.high_level_path, self.initial_dir,
                     final_target_node = self.end_node, min_height = self.min_height )
-        print("\tnext 10")
 
         if low_level_path:
-            print("\tnext 11", low_level_path[0].index, low_level_path[-1].index)
             # "Jump through" next entrance:
             prev_end_node = low_level_path[-1]
             exit_pos = prev_end_node.pos
@@ -268,7 +255,6 @@ class PathSectionFinder:
 
             return high_level_path, low_level_path
         else:
-            print("\tnext 12")
             raise PathUnreachableError("Unexpected end of path")
 
     def __iter__( self ):
