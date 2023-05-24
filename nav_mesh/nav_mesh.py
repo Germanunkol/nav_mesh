@@ -62,108 +62,60 @@ class NavMesh():
         return subpath
         
     def find_full_path( self, start_node, end_node ):
-        start_high_level_node = self.zones[start_node.zone_id].node
-        end_high_level_node = self.zones[end_node.zone_id].node
-
-        print("Searching for path from, to:", start_high_level_node, end_high_level_node )
-        high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
-   
-        print("high level", high_level_path)
-        print("Found high level path:", len(high_level_path) )
-        
-        #a_star.path_to_mesh( high_level_path )
 
         full_low_level_path = []
+        full_high_level_path = None
         
-        cur_start_node = start_node
-        cur_high_level_path = high_level_path.copy()
-        next_entrance = self.find_next_entrance( high_level_path )
-        while next_entrance:
-            #print("Next entrance:", next_entrance)
-            
-            entrance_nodes = [n for n in next_entrance.nodes if n.zone_id == cur_start_node.zone_id]
-            low_level_path = a_star.a_star( cur_start_node, entrance_nodes )
+        finder = PathSectionFinder( self, start_node, end_node )
+        #print(finder)
+        for high_level_path, low_level_path in finder:
+            if full_high_level_path is None:
+                full_high_level_path = high_level_path
+            full_low_level_path += low_level_path
+
+        return full_high_level_path, full_low_level_path
+
+    def find_path_sections( self, start_node, end_node, end_pos=None, avoid=[], max_height=0,
+            initial_dir = np.asarray((0,0,0)) ):
+        return PathSectionFinder( self, start_node, end_node, end_pos, avoid, max_height,
+                initial_dir )
+
+    def find_path_to_next_entrance( self, start_node, prev_high_level_path,
+            initial_dir = np.asarray((0,0,0)), final_target_node = None ):
+        
+        # Find the next entrance along the high level path:
+        next_entrance = self.find_next_entrance( prev_high_level_path )
+
+        if next_entrance:
+
+            # "Jump through" the entrance:
+            #prev_end_node = prev_low_level_path[-1]
+            #next_start_node = prev_end_node.get_node_on_other_side( next_entrance )
+
+            #print("Next entrance:", next_entrance)l
+           
+            # Find path to the entrance:
+            # 1. Choose the nodes which are part of the current zone and part of the entrance
+            # to the next zone:
+            entrance_nodes = [n for n in next_entrance.nodes \
+                    if n.zone_id == start_node.zone_id]
+            # 2. Find the path to one of those:
+            low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
+                    final_target_node = final_target_node )
             
             #a_star.path_to_mesh( low_level_path )
             #print("Found detail level path:", len(low_level_path) )
             
-            # "Jump through" the entrance:
-            cur_end_node = low_level_path[-1]
-            cur_start_node = cur_end_node.get_node_on_other_side( next_entrance )
-            #print( "Jump through:", cur_end_node, "->", cur_start_node )
             
             # Find next path:
-            cur_high_level_path = self.get_subpath( cur_high_level_path, next_entrance.node )
+            new_high_level_path = self.get_subpath( prev_high_level_path, next_entrance.node )
             #print("Truncated high level path:", len(cur_high_level_path) )
             
-            next_entrance = self.find_next_entrance( cur_high_level_path )
-            
-            full_low_level_path += low_level_path
-        
-        #print("Getting final path:")
-        low_level_path = a_star.a_star( cur_start_node, [end_node] )
-        #a_star.path_to_mesh( low_level_path )
-        #print("Found detail level path:", len(low_level_path) )
+            return new_high_level_path, low_level_path, next_entrance
+        else:
+            return None, None, None
+ 
 
-        return high_level_path, full_low_level_path
-
-    def find_partial_path( self, start_node, end_node, avoid=[], max_height=0 ):
-        """ Find a (sub-part of a) path. If start_node and end_node are in the same sector, find
-        the full detail-level path. If they are not, find the full high-level path and the detail-
-        level path for the first sector.
-        The 'avoid' parameter is an (optional) list of nodes which should be considered blocked"""
-
-        # need to cross at least one entrance to another sector?
-        if start_node.zone_id != end_node.zone_id: 
-            start_high_level_node = self.zones[start_node.zone_id].node
-            end_high_level_node = self.zones[end_node.zone_id].node
-            
-            #print("Searching for path from, to:", start_high_level_node, end_high_level_node )
-            t = time.time()
-            import cProfile, pstats
-            profiler = cProfile.Profile()
-            profiler.enable()
-            high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
-            profiler.disable()
-            stats = pstats.Stats(profiler).sort_stats('ncalls')
-            stats.print_stats()
-            print("\thigh_level_path:", time.time()-t)
-            t = time.time()
-
-            print("high_level_path", high_level_path)
-
-            if not high_level_path:
-                return None, None
-        
-            #print("Found high level path:", len(high_level_path) )
-            
-            #a_star.path_to_mesh( high_level_path )
-
-            cur_start_node = start_node
-            cur_high_level_path = high_level_path.copy()
-            next_entrance = self.find_next_entrance( high_level_path )
-            print("\tnext entrance:", time.time()-t)
-            t = time.time()
-            #print("Next entrance:", next_entrance)
-                
-            entrance_nodes = [n for n in next_entrance.nodes if n.zone_id == cur_start_node.zone_id]
-            print("\tlist:", time.time()-t)
-            t = time.time()
-            low_level_path = a_star.a_star( cur_start_node, entrance_nodes, avoid=avoid,
-                    max_height=max_height )
-            print("\tlow_level_path:", time.time()-t)
-            t = time.time()
-
-        else:   # start and end in same sector
-            high_level_path = []        # TODO: Maybe return zone node instead?
-            t = time.time()
-            low_level_path = a_star.a_star( start_node, [end_node], avoid=avoid,
-                    max_height=max_height )
-            print("\tlow_level_path:", time.time()-t)
-        #print("Found detail level path:", len(low_level_path) )
-
-        return high_level_path, low_level_path
-    
     def find_random_path( self ):
         start_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
         end_node = self.nodes[ random.randint(0,len(self.nodes)-1) ]
@@ -203,6 +155,107 @@ class NavMesh():
             #nav_mesh = pickle.load( f )
             nav_mesh = loader.renamed_load( f, "lib.nav_mesh", "lib.pathfinding" )
             print( "\tNavMesh loaded." )
-            print( "node list:", nav_node.NavNode.node_list )
         return nav_mesh
+
+class PathSectionFinder:
+
+    def __init__( self, nav_mesh, start_node, end_node, end_pos=None, avoid=[], max_height=0,
+            initial_dir = np.asarray((0,0,0)) ):
+        """ Find a (sub-part of a) path. If start_node and end_node are in the same sector, find
+        the full detail-level path. If they are not, find the full high-level path and the detail-
+        level path for the first sector.
+
+        If end_pos is given, it is appended to the final low-level-path.
+
+        The 'avoid' parameter is an (optional) list of nodes which should be considered blocked"""
+
+        self.high_level_path = None
+        self.start_node = start_node
+        self.end_node = end_node
+        self.nav_mesh = nav_mesh
+        self.end_pos = end_pos  # Optional, could be None!
+        self.initial_dir = initial_dir
+
+        # TODO!!
+        self.avoid = avoid
+        self.max_height = max_height
+
+        self.last_section_found = False
+
+        # need to cross at least one entrance to another sector?
+        if self.start_node.zone_id != self.end_node.zone_id: 
+            start_high_level_node = self.nav_mesh.zones[self.start_node.zone_id].node
+            end_high_level_node = self.nav_mesh.zones[self.end_node.zone_id].node
+            
+            high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
+            
+            if not high_level_path:
+                self.last_section_found = True
+       
+            self.high_level_path = high_level_path
+            self.cur_start_node = self.start_node
+         
+        else:   # start and end in same sector
+            self.high_level_path = []        # TODO: Maybe return zone node instead?
+            self.cur_start_node = self.start_node
+
+    def __next__( self ):
+
+        # End iteration:
+        if self.last_section_found:
+            raise StopIteration()
+
+        if self.cur_start_node.zone_id == self.end_node.zone_id:
+            # This means that there is no further
+            # entrance on the path and we've reached the last zone:
+            low_level_path = a_star.a_star( self.cur_start_node, [self.end_node],
+                    initial_dir = self.initial_dir )
+            self.last_section_found = True   # Stop iteration after this
+
+            # If an end position is given, we don't want to end at the last node,
+            # but rather on the last position:
+            if self.end_pos:
+                if len(low_level_path) > 0:
+                    normal = low_level_path[-1].normal
+                else:
+                    normal = LVector3f(0,0,1)
+                # Create a (temporary) node at the target position which we can add
+                # to the path:
+                tmp_end_node = nav_node.SimpleNavNode( self.end_pos, normal=normal )
+             
+                if len(low_level_path) > 1:
+                    # If the distance to the last path node would be beyond the target position,
+                    # remove this last node:
+                    dist_last_segment = np.linalg.norm(low_level_path[-2].pos - low_level_path[-1].pos)
+                    dist_to_end = np.linalg.norm(tmp_end_node.pos - low_level_path[-1].pos)
+                    if dist_to_end < dist_last_segment:
+                        del low_level_path[-1]
+
+
+                low_level_path.append( tmp_end_node )
+                
+            return [], low_level_path
+
+        high_level_path, low_level_path, next_entrance = \
+                self.nav_mesh.find_path_to_next_entrance(
+                    self.cur_start_node, self.high_level_path, self.initial_dir,
+                    final_target_node = self.end_node )
+
+        if low_level_path:
+            # "Jump through" next entrance:
+            prev_end_node = low_level_path[-1]
+            exit_pos = prev_end_node.pos
+            self.cur_start_node = prev_end_node.get_node_on_other_side( next_entrance )
+            self.high_level_path = high_level_path
+            entry_pos = self.cur_start_node.pos
+
+            self.initial_dir = entry_pos - exit_pos
+
+            return high_level_path, low_level_path
+        else:
+            raise Exception("Unexpected end of path")
+
+    def __iter__( self ):
+        return self
+
 

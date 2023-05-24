@@ -364,7 +364,7 @@ def nav_mesh_from_object( obj ):
     nav_mesh = create_nav_mesh( nodes, num_zones, zone_heights )
     create_high_level_mesh( nav_mesh )
     
-    debug_objs = clustering_utils.create_debug_meshes( bm, assigned_zone_ids, num_zones )
+    #debug_objs = clustering_utils.create_debug_meshes( bm, assigned_zone_ids, num_zones )
     bm.free()    
     
     #test_nav_mesh( nav_mesh )
