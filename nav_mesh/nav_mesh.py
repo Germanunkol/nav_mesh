@@ -16,11 +16,11 @@ from . import nav_node
 
 class NavMesh():
     
-    def __init__( self, nodes, num_rooms ):
+    def __init__( self, nodes, num_zones ):
         
         num_nodes = len(nodes)
         self.nodes = nodes
-        self.rooms = {}
+        self.zones = {}
         self.entrances = []
         
         #self.init_kd_tree()
@@ -37,8 +37,8 @@ class NavMesh():
         dist, index = self.kd_tree.query( (pos.x, pos.y, pos.z) )
         return self.nodes[index]
     
-    def add_room( self, room ):
-        self.rooms[room.room_id] = room
+    def add_zone( self, zone ):
+        self.zones[zone.zone_id] = zone
         
     def add_entrance( self, entrance ):
         self.entrances.append( entrance )
@@ -62,8 +62,8 @@ class NavMesh():
         return subpath
         
     def find_full_path( self, start_node, end_node ):
-        start_high_level_node = self.rooms[start_node.room_id].node
-        end_high_level_node = self.rooms[end_node.room_id].node
+        start_high_level_node = self.zones[start_node.zone_id].node
+        end_high_level_node = self.zones[end_node.zone_id].node
 
         print("Searching for path from, to:", start_high_level_node, end_high_level_node )
         high_level_path = a_star.a_star( start_high_level_node, [end_high_level_node] )
@@ -81,7 +81,7 @@ class NavMesh():
         while next_entrance:
             #print("Next entrance:", next_entrance)
             
-            entrance_nodes = [n for n in next_entrance.nodes if n.room_id == cur_start_node.room_id]
+            entrance_nodes = [n for n in next_entrance.nodes if n.zone_id == cur_start_node.zone_id]
             low_level_path = a_star.a_star( cur_start_node, entrance_nodes )
             
             #a_star.path_to_mesh( low_level_path )
@@ -114,9 +114,9 @@ class NavMesh():
         The 'avoid' parameter is an (optional) list of nodes which should be considered blocked"""
 
         # need to cross at least one entrance to another sector?
-        if start_node.room_id != end_node.room_id: 
-            start_high_level_node = self.rooms[start_node.room_id].node
-            end_high_level_node = self.rooms[end_node.room_id].node
+        if start_node.zone_id != end_node.zone_id: 
+            start_high_level_node = self.zones[start_node.zone_id].node
+            end_high_level_node = self.zones[end_node.zone_id].node
             
             #print("Searching for path from, to:", start_high_level_node, end_high_level_node )
             t = time.time()
@@ -146,7 +146,7 @@ class NavMesh():
             t = time.time()
             #print("Next entrance:", next_entrance)
                 
-            entrance_nodes = [n for n in next_entrance.nodes if n.room_id == cur_start_node.room_id]
+            entrance_nodes = [n for n in next_entrance.nodes if n.zone_id == cur_start_node.zone_id]
             print("\tlist:", time.time()-t)
             t = time.time()
             low_level_path = a_star.a_star( cur_start_node, entrance_nodes, avoid=avoid,
@@ -155,7 +155,7 @@ class NavMesh():
             t = time.time()
 
         else:   # start and end in same sector
-            high_level_path = []        # TODO: Maybe return room node instead?
+            high_level_path = []        # TODO: Maybe return zone node instead?
             t = time.time()
             low_level_path = a_star.a_star( start_node, [end_node], avoid=avoid,
                     max_height=max_height )
@@ -186,7 +186,7 @@ class NavMesh():
         # Anyways, adding them here again manually solves the issue:
         for n in self.nodes:
             nav_node.NavNode.node_list[n.level][n.index] = n
-        for k, r in self.rooms.items():
+        for k, r in self.zones.items():
             n = r.node
             nav_node.NavNode.node_list[n.level][n.index] = n
 

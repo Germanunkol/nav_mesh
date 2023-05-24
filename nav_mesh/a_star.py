@@ -32,7 +32,7 @@ def a_star( start_node, end_nodes, verbose=False ):
         print( "\tto:", [str(n) for n in end_nodes] )
     
     for n in end_nodes:
-        assert n.room_id == start_node.room_id, "Cannot run A* for nodes from separete rooms. room_id must be the same for each node!"
+        assert n.Zone_id == start_node.Zone_id, "Cannot run A* for nodes from separete Zones. Zone_id must be the same for each node!"
     
     assert len( end_nodes ) > 0, "Cannot run A*, end nodes list is empty!"
     

@@ -15,7 +15,6 @@ if not dir in sys.path:
     sys.path.append(dir)
 
 import utils
-import cube_clustering
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
@@ -27,10 +26,12 @@ def cube_clustering( verts, cube_side_length ):
     
     room_ids = {}
     
+    print("VERTS:", verts, len(verts))
     for vert_index,v in enumerate(verts):
         ix = math.floor(v.co.x/cube_side_length)
         iy = math.floor(v.co.y/cube_side_length)
         iz = math.floor(v.co.z/cube_side_length)
+        print(v.co, ix, iy, iz)
         index = f"{ix}_{iy}_{iz}"
         if not index in room_ids:
             room_ids[index] = len(room_ids)
@@ -52,7 +53,7 @@ def estimate_rooms( bm, cube_side_length=20 ):
 
     res = cube_clustering( bm.verts, cube_side_length=cube_side_length )
     
-    print("Done.")
+    print("Done.", res)
     print("=======================")
     
     return res

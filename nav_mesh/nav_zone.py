@@ -15,34 +15,33 @@ importlib.reload(nav_node)
 importlib.reload(nav_mesh_utils)
 
 
-class NavRoom():
+class NavZone():
     
-    def __init__( self, room_id, nodes ):
+    def __init__( self, zone_id, nodes, height ):
         
-        self.room_id = room_id
+        self.zone_id = zone_id
         
-        # List of all the verts within this room. 
+        # List of all the verts within this zone. 
         # Should all hold an ".index" member which indexes into the complete(!) mesh
         self.nodes = nodes
         
-        # Links to connected neighbor rooms:
+        # Links to connected neighbor zones:
         self.connections = {}
         self.entrances = {}
         
         self.mean_point = None
         self.center_vert = None
-        self.node = None
-        
-        self.max_height = max( [n.max_height for n in nodes] )
+        self.node = None        
+        self.height = height
     
     def add_entrance( self, e ):
-        # Get the room id of the connected room:
-        other_room_id = e.get_other_room_id( self.room_id )
+        # Get the zone id of the connected zone:
+        other_zone_id = e.get_other_zone_id( self.zone_id )
         
-        if not other_room_id in self.entrances.keys():
-            # Create a list to hold entrances between this room and other_room_id:
-            self.entrances[other_room_id] = []
-        self.entrances[other_room_id].append( e )
+        if not other_zone_id in self.entrances.keys():
+            # Create a list to hold entrances between this zone and other_zone_id:
+            self.entrances[other_zone_id] = []
+        self.entrances[other_zone_id].append( e )
         
     @property
     def center( self ):
@@ -56,5 +55,5 @@ class NavRoom():
         
     def create_center_node( self, index ):
         if not self.node:
-            self.node = nav_node.NavNode( self.center, index, level=1, max_height=self.max_height )
+            self.node = nav_node.NavNode( self.center, index, level=1, max_height=self.height )
           
