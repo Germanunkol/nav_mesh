@@ -6,6 +6,8 @@ import math
 import bisect # for inserting into sorted list
 import random
 
+from .exceptions import PathUnreachableError
+
 #    def __str__( self ):
 #        if self.parent_node:
 #            return f"{self.vert.index} (parent: {self.parent_node.vert.index}) (g: {self.g}, h: {self.h}, f: {self.f})"
@@ -42,18 +44,22 @@ def backtrack( final_node ):
         
     return path
 
-def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max_height=0,
+def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min_height=0,
         initial_dir = np.asarray((0,0,0)), final_target_node=None ):
     """
     - start_node: a single node at which to start searching
     - end_nodes: multiple nodes, the path will end at one of these.
     - avoid: nodes which should be considered "blocked"
-    - max_height: only nodes are allowed to be traversed which have a max_height lower than the
-        max_height given here. (TODO)
+    - min_height: only nodes are allowed to be traversed which have a max_height higher than the
+        min_height given here. (TODO)
     """
     #if len( end_nodes ) > max_end_nodes:
         #print( f"reducing end nodes from {len(end_nodes)} to {max_end_nodes}")
-    valid_end_nodes = [n for n in end_nodes if n.max_height >= max_height]
+    assert len( end_nodes ) > 0, "Cannot run A*, end nodes list is empty!"
+
+    valid_end_nodes = [n for n in end_nodes if n.max_height >= min_height]
+    if len(valid_end_nodes) < 0:
+        raise PathUnreachableError( "All end nodes are too low!" )
     #end_nodes = random.sample(valid_end_nodes, max_end_nodes)      # TODO: Reenable?
     end_nodes = valid_end_nodes[0:max_end_nodes]
 
@@ -66,7 +72,6 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
     for n in end_nodes:
         assert n.room_id == start_node.room_id, "Cannot run A* for nodes from separate rooms. room_id must be the same for each node!"
     
-    assert len( end_nodes ) > 0, "Cannot run A*, end nodes list is empty!"
     
     open_list = list()
     closed = set()
@@ -103,6 +108,13 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
             if verbose:
                 print("\tTarget node found. Returning path.")
             return backtrack( cur_node )
+
+        parent = cur_node.parent_node
+        if parent:
+            vec_from_parent = cur_node.pos - parent.pos
+            dir_from_parent = vec_from_parent/np.linalg.norm( vec_from_parent )
+        else:
+            dir_from_parent = initial_dir
         
         f_updated = False
         for neighbor_node in cur_node.direct_neighbors:
@@ -110,6 +122,8 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
                 print("\t\tneighbor:", neighbor_node, neighbor_node.index, f"(closed {neighbor_node.index in closed})")
             #if neighbor_node.blocked:
             #    continue
+            if neighbor_node.max_height < min_height:
+                continue
             if not neighbor_node.index in closed:
                 
                 # If this is not in the open list, create a new vert and add it to the open list:
@@ -117,13 +131,18 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
                     h = eucledian( neighbor_node, target_nodes_for_heuristic )
                     #h = eucledian( neighbor_node, end_nodes )
                     neighbor_node.set_heuristic( h )
-                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=initial_dir )
+
+                    # TODO: Initial_dir should change to dir_from_parent!
+                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=dir_from_parent )
+                    #angle_penalty = 0   # DEBUG!
                     neighbor_node.set_parent( cur_node, angle_penalty ) 
                     bisect.insort( open_list, neighbor_node )
                 else:
                     # If node is already on the open list, potentially update:
                     #new_g = cur_node.g + np.linalg.norm(neighbor_node.pos - cur_node.pos)
-                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=initial_dir )
+                    # TODO: Initial_dir should change to dir_from_parent!
+                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=dir_from_parent )
+                    #angle_penalty = 0   # DEBUG!
                     new_g = cur_node.g + \
                             cur_node.dist_to_neighbor( neighbor_node ) + \
                             angle_penalty
@@ -140,7 +159,8 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], max
     # No path found:
     if verbose:
         print("\tNo path found.")
-    return None
+    #return None
+    raise PathUnreachableError("Could not find path to target")
 
 def path_to_mesh( nodes ):
     

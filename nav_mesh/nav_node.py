@@ -136,7 +136,9 @@ class NavNode( SimpleNavNode ):
         dist_from_parent = np.linalg.norm( from_parent )
         dist_to_other = np.linalg.norm( to_other )
         if dist_from_parent > 0 and dist_to_other > 0:
-            ang = math.acos( np.dot( from_parent, to_other )/(dist_from_parent*dist_to_other) )
+            dot = np.dot( from_parent, to_other )/(dist_from_parent*dist_to_other)
+            dot = max( -1, min( dot, 1 ) )  # Only necessary for the occasional numerical imprecision
+            ang = math.acos( dot )
             if ang > max_ang:
                 return 1000*ang # Make it very expensive to use this steep ang (but not impossible)
         return 0    # Fallback
