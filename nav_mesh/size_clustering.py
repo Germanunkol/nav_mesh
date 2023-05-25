@@ -17,7 +17,7 @@ import utils
 import imp
 imp.reload(utils)
 
-def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 10 ):
+def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 15 ):
     
     open = set( bm.verts )
     
@@ -43,6 +43,7 @@ def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 10 ):
     while len(open) > 0:
         
         cur_start_vert = next(iter(open))  # Get first element without removing it
+        cur_start_normal = cur_start_vert.normal
          
         front.add( cur_start_vert )
         cur_level = level_for_height( heights[cur_start_vert.index] )
@@ -61,7 +62,8 @@ def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 10 ):
                     if level_for_height( heights[n.index] ) == cur_level:
                         dist2 = (n.co - cur_start_vert.co).length_squared
                         if dist2 < max_radius2:
-                            front.add(n)
+                            if cur_start_normal.angle( n.normal ) < math.pi*0.3:
+                                front.add(n)
         
         # Remember the height for this zone:
         zone_heights.append( height_for_level( cur_level ) )
