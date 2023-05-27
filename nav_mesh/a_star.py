@@ -45,7 +45,7 @@ def backtrack( final_node ):
     return path
 
 def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min_height=0,
-        initial_dir = np.asarray((0,0,0)), final_target_node=None ):
+        initial_dir = None, final_target_node=None ):
     """
     - start_node: a single node at which to start searching
     - end_nodes: multiple nodes, the path will end at one of these.
@@ -64,6 +64,8 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
     end_nodes = valid_end_nodes[0:max_end_nodes]
 
     #assert start_node.max_height > max_height, "The given start node for the path search has a max_height which is lower than the given max_height!"
+
+    use_angular_penalty = (initial_dir is not None)
     
     if verbose:
         print( "Searching path. From:", start_node)
@@ -111,11 +113,14 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
             return backtrack( cur_node )
 
         parent = cur_node.parent_node
-        if parent:
-            vec_from_parent = cur_node.pos - parent.pos
-            dir_from_parent = vec_from_parent/np.linalg.norm( vec_from_parent )
-        else:
-            dir_from_parent = initial_dir
+        if use_angular_penalty:
+            if parent:
+                vec_from_parent = cur_node.pos - parent.pos
+                dir_from_parent = vec_from_parent/np.linalg.norm( vec_from_parent )
+            else:
+                dir_from_parent = initial_dir
+
+        angle_penalty = 0
         
         f_updated = False
         for neighbor_node in cur_node.direct_neighbors:
@@ -132,17 +137,20 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
                     h = eucledian( neighbor_node, target_nodes_for_heuristic )
                     #h = eucledian( neighbor_node, end_nodes )
                     neighbor_node.set_heuristic( h )
+                   
+                    if use_angular_penalty:
+                        angle_penalty = cur_node.angle_penalty(
+                                neighbor_node, initial_dir=dir_from_parent ) \
 
-                    # TODO: Initial_dir should change to dir_from_parent!
-                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=dir_from_parent )
                     #angle_penalty = 0   # DEBUG!
                     neighbor_node.set_parent( cur_node, angle_penalty ) 
                     bisect.insort( open_list, neighbor_node )
                 else:
                     # If node is already on the open list, potentially update:
                     #new_g = cur_node.g + np.linalg.norm(neighbor_node.pos - cur_node.pos)
-                    # TODO: Initial_dir should change to dir_from_parent!
-                    angle_penalty = cur_node.angle_penalty( neighbor_node, initial_dir=dir_from_parent )
+                    if use_angular_penalty:
+                        angle_penalty = cur_node.angle_penalty(
+                                neighbor_node, initial_dir=dir_from_parent )
                     #angle_penalty = 0   # DEBUG!
                     new_g = cur_node.g + \
                             cur_node.dist_to_neighbor( neighbor_node ) + \
