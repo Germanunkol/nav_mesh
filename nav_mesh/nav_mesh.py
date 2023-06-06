@@ -13,7 +13,10 @@ from scipy.spatial import KDTree
 from . import a_star
 from . import loader
 from . import nav_node
+from . import debug_utils
 from .exceptions import PathUnreachableError
+
+# Remove to disable panda3d dependency:
 
 class NavMesh():
     
@@ -23,8 +26,13 @@ class NavMesh():
         self.nodes = nodes
         self.zones = {}
         self.entrances = []
-        
+
+        self.debug_display_node = None
+
         #self.init_kd_tree()
+    def destroy( self ):
+        if self.debug_display_node:
+            self.debug_display_node.remove_node()
 
     def init_kd_tree( self ):
         nodes_tensor = np.empty( (len(self.nodes),3) )
@@ -81,10 +89,14 @@ class NavMesh():
                 initial_dir )
 
     def find_path_to_next_entrance( self, start_node, prev_high_level_path,
-            initial_dir = np.asarray((0,0,0)), final_target_node = None, min_height = 0 ):
+            initial_dir = np.asarray((0,0,0)), final_target_node = None, min_height = 0,
+            debug_display_active = False ):
         
         # Find the next entrance along the high level path:
         next_entrance = self.find_next_entrance( prev_high_level_path )
+
+        if self.debug_display_node:
+            self.debug_display_node.remove_node()
 
         if next_entrance:
 
@@ -100,8 +112,15 @@ class NavMesh():
             entrance_nodes = [n for n in next_entrance.nodes \
                     if n.zone_id == start_node.zone_id]
             # 2. Find the path to one of those:
-            low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
-                    final_target_node = final_target_node, min_height=min_height )
+            if not debug_display_active:
+                low_level_path = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
+                        final_target_node = final_target_node, min_height=min_height )
+            else:
+                low_level_path, node_debug_info = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
+                        final_target_node = final_target_node, min_height=min_height,
+                        return_debug_info = True )
+                self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
+                        self.nodes )
             
             #a_star.path_to_mesh( low_level_path )
             #print("Found detail level path:", len(low_level_path) )
@@ -142,6 +161,8 @@ class NavMesh():
             n = r.node
             nav_node.NavNode.node_list[n.level][n.index] = n
 
+        self.debug_display_node = None
+
     def save_to_file( self, filename = "nav_mesh.pickle" ):
         with open( filename, "wb" ) as f:
             pickle.dump( self, f )
@@ -176,6 +197,9 @@ class PathSectionFinder:
         self.end_pos = end_pos  # Optional, could be None!
         self.initial_dir = initial_dir
 
+        self.debug_display_active = False
+        self.debug_display_node = None
+    
         # TODO!!
         self.avoid = avoid
         self.min_height = min_height
@@ -200,17 +224,33 @@ class PathSectionFinder:
             self.high_level_path = []        # TODO: Maybe return zone node instead?
             self.cur_start_node = self.start_node
 
+    def destroy( self ):
+        if self.debug_display_node:
+            self.debug_display_node.remove_node()
+
     def __next__( self ):
 
         # End iteration:
         if self.last_section_found:
             raise StopIteration()
 
+        if self.debug_display_node:
+            self.debug_display_node.remove_node()
+
         if self.cur_start_node.zone_id == self.end_node.zone_id:
             # This means that there is no further
             # entrance on the path and we've reached the last zone:
-            low_level_path = a_star.a_star( self.cur_start_node, [self.end_node],
-                    initial_dir = self.initial_dir, min_height = self.min_height )
+            if not self.debug_display_active:
+                low_level_path = a_star.a_star( self.cur_start_node, [self.end_node],
+                        initial_dir = self.initial_dir, min_height = self.min_height )
+            else:
+                low_level_path, node_debug_info = a_star.a_star( self.cur_start_node,
+                        [self.end_node],
+                        initial_dir = self.initial_dir, min_height = self.min_height,
+                        return_debug_info = True )
+                self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
+                        self.nav_mesh.nodes )
+
             self.last_section_found = True   # Stop iteration after this
 
             # If an end position is given, we don't want to end at the last node,
@@ -241,7 +281,8 @@ class PathSectionFinder:
         high_level_path, low_level_path, next_entrance = \
                 self.nav_mesh.find_path_to_next_entrance(
                     self.cur_start_node, self.high_level_path, self.initial_dir,
-                    final_target_node = self.end_node, min_height = self.min_height )
+                    final_target_node = self.end_node, min_height = self.min_height,
+                    debug_display_active = self.debug_display_active )
 
         if low_level_path:
             # "Jump through" next entrance:
@@ -260,4 +301,10 @@ class PathSectionFinder:
     def __iter__( self ):
         return self
 
+
+    def set_debug_display( self, active=True ):
+        self.debug_display_active = active
+        if not active:
+            if self.debug_display_node:
+                self.debug_display_node.remove_node()
 

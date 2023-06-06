@@ -45,7 +45,7 @@ def backtrack( final_node ):
     return path
 
 def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min_height=0,
-        initial_dir = None, final_target_node=None ):
+        initial_dir = None, final_target_node=None, return_debug_info=False ):
     """
     - start_node: a single node at which to start searching
     - end_nodes: multiple nodes, the path will end at one of these.
@@ -110,7 +110,16 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
         if cur_node in end_nodes:
             if verbose:
                 print("\tTarget node found. Returning path.")
-            return backtrack( cur_node )
+            if not return_debug_info:
+                return backtrack( cur_node )
+            else:
+                debug_info = {
+                        "closed": closed,
+                        "open_list": open_list,
+                        "end_nodes": end_nodes
+                        }
+                return backtrack( cur_node ), debug_info
+            
 
         parent = cur_node.parent_node
         if use_angular_penalty:
