@@ -194,7 +194,7 @@ def create_debug_meshes( bm, assigned_rooms, num_rooms, overlap=False, assign_ma
     return objects#, verts_to_clusters_per_object
 
 
-def create_hierarchy( obj, cube_side_length=10, overlap=False, assign_material_indices=False, edge_split=False ):#, verts_to_clusters=None ):
+def create_hierarchy( obj, cube_side_length=10, overlap=False, assign_material_indices=False, edge_split=False, copy_uvs=True ):#, verts_to_clusters=None ):
     
     print("Split meshes:", obj.name)
     # Get the active mesh
@@ -209,7 +209,7 @@ def create_hierarchy( obj, cube_side_length=10, overlap=False, assign_material_i
     objects = create_debug_meshes( bm, assigned_rooms,
             num_rooms=max(assigned_rooms)+1, overlap=overlap,
             assign_material_indices=assign_material_indices,
-            move_origin=True, copy_smooth=True, copy_uvs=True )
+            move_origin=True, copy_smooth=True, copy_uvs=copy_uvs )
     
     bm.free()
 

@@ -17,7 +17,7 @@ import utils
 import imp
 imp.reload(utils)
 
-def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 15 ):
+def split_zones_by_height( bm, heights, split_at = [1,3,5,7], max_radius = 10 ):
     
     open = set( bm.verts )
     
@@ -26,11 +26,16 @@ def split_zones_by_height( bm, heights, split_at = 0.5, max_radius = 15 ):
     front = set()
     
     def level_for_height( h ):
-        h = min( h, 10 )
-        return int(h/split_at)
+        #h = min( h, 10 )
+        #return int(h/split_at)
+        for i, h_i in enumerate(split_at):
+            if h < h_i:
+                return i
+        return len(split_at)-1
     
     def height_for_level( l ):
-        return l*split_at
+        #return l*split_at
+        return split_at[l]
     
     #zone_ids = {}
     assigned_zone_ids = [-1 for v in bm.verts]

@@ -72,6 +72,42 @@ def visualize_max_node_heights( bm, heights, name="MaxNodeHeights" ):
     bm_new.to_mesh(me)
     bm_new.free()  # free and prevent further access
 
+def visualize_low_level_nav_mesh( nav_mesh ):
+    
+    name = "nav_mesh_low_level"
+        
+    print("building", name)
+    
+    me = bpy.data.meshes.new(name)  # add a new mesh
+    obj = bpy.data.objects.new(name, me)  # add a new object using the mesh
+    col = bpy.context.scene.collection
+    col.objects.link(obj)
+    
+    bm_new = bmesh.new()
+    
+    node_index_to_vert_map = {}
+    
+    for i, n in enumerate( nav_mesh.nodes ):
+        v = bm_new.verts.new( n.pos )
+        node_index_to_vert_map[ n.index ] = v
+    
+    for i, n in enumerate( nav_mesh.nodes ):
+        for neighbor in n.direct_neighbors:
+            v1 = node_index_to_vert_map[n.index]
+            v2 = node_index_to_vert_map[neighbor.index]
+            try:
+                bm_new.edges.new( (v1, v2) )
+                print("edge")
+            except:
+                pass
+    print( "Verts:", len(bm_new.verts), "Edges", len(bm_new.edges) )
+    
+    # Finish up, write the bmesh back to the mesh
+    bm_new.to_mesh(me)
+    bm_new.free()  # free and prevent further access
+    
+    print("built", name)
+    
 
 def get_neighbor_verts( v ):
 
@@ -145,3 +181,62 @@ def test_nav_mesh( mesh ):
 
     path_to_mesh( high_level_path )
     path_to_mesh( low_level_path )
+
+def entrance_to_mesh( entrance ):
+    name = f"entrance_{entrance.zone_id_1}-{entrance.zone_id_2}"
+    me = bpy.data.meshes.new(name)  # add a new mesh
+    obj = bpy.data.objects.new(name, me)  # add a new object using the mesh
+    col = bpy.context.scene.collection
+    col.objects.link(obj)
+
+    bm = bmesh.new()   # create an empty BMesh
+    bm.from_mesh( me )
+    
+    for n in entrance.nodes:
+        v = bm.verts.new( n.pos )
+#        for neighbor in n.next_level_neighbors:
+#            v2 = bm.verts.new( neighbor.pos )
+#            bm.edges.new( (v, v2) )
+        
+#    for n in entrance.nodes:
+#        v1 = id_map[n.index]
+#        for neighbor in n.next_level_neighbors:
+#            v2 = id_map[neighbor.index]
+#            
+#            bm.edges.new( v1, v2 )
+    
+    bm.to_mesh( me )
+    
+def zone_to_mesh( zone ):
+    name = f"zone_{zone.zone_id}"
+    me = bpy.data.meshes.new(name)  # add a new mesh
+    obj = bpy.data.objects.new(name, me)  # add a new object using the mesh
+    col = bpy.context.scene.collection
+    col.objects.link(obj)
+
+    bm = bmesh.new()   # create an empty BMesh
+    bm.from_mesh( me )
+    
+    id_map = {}
+    for n in zone.nodes:
+        v = bm.verts.new( n.pos )
+        id_map[n.index] = v
+        
+    for n in zone.nodes:
+        v1 = id_map[n.index]
+        for neighbor in n.direct_neighbors:
+            v2 = id_map[neighbor.index]
+            try:
+                bm.edges.new( (v1,v2) )
+            except:
+                pass
+            for neighbor2 in n.direct_neighbors:
+                if neighbor2 in neighbor.direct_neighbors:
+                    v3 = id_map[neighbor2.index]
+                    try:
+                        bm.faces.new( (v1,v2,v3) )
+                        bm.faces.new( (v3,v2,v1) )
+                    except:
+                        pass
+    
+    bm.to_mesh( me )
