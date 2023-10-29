@@ -41,9 +41,8 @@ def display_debug_info( debug_info, all_nodes ):
 
     l.set_color( (1, 0.25, 0.25, 1) )
     for n in debug_info["end_nodes"]:
-        print("END NODE")
-        l.set_thickness( 7 )
-        l.move_to( to_panda_vector(n.pos) + LVector3f.up()*0.2 )
+        l.set_thickness( 20 )
+        l.move_to( to_panda_vector(n.pos) + LVector3f.up()*0.9 )
         l.draw_to( to_panda_vector(n.pos) )
         l.set_thickness( 2 )
         if n.parent_node_id >= 0:

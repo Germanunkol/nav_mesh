@@ -61,7 +61,8 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
     if len(valid_end_nodes) < 0:
         raise PathUnreachableError( "All end nodes are too low!" )
     #end_nodes = random.sample(valid_end_nodes, max_end_nodes)      # TODO: Reenable?
-    end_nodes = valid_end_nodes[0:max_end_nodes]
+    #end_nodes = valid_end_nodes[0:max_end_nodes]
+    end_nodes = valid_end_nodes     # Use all valid end nodes. This seems to be the most stable
 
     #assert start_node.max_height > max_height, "The given start node for the path search has a max_height which is lower than the given max_height!"
 
