@@ -13,7 +13,10 @@ from scipy.spatial import KDTree
 from . import a_star
 from . import loader
 from . import nav_node
-from . import debug_utils
+try:
+    from . import debug_utils
+except:
+    pass
 from .exceptions import PathUnreachableError
 
 # Remove to disable panda3d dependency:
@@ -28,6 +31,7 @@ class NavMesh():
         self.entrances = []
 
         self.debug_display_node = None
+        self.debug_display_active = False
 
         #self.init_kd_tree()
     def destroy( self ):
@@ -119,8 +123,9 @@ class NavMesh():
                 low_level_path, node_debug_info = a_star.a_star( start_node, entrance_nodes, initial_dir=initial_dir,
                         final_target_node = final_target_node, min_height=min_height,
                         return_debug_info = True )
-                self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
-                        self.nodes )
+                if self.debug_display_active:
+                    self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
+                            self.nodes )
             
             #a_star.path_to_mesh( low_level_path )
             #print("Found detail level path:", len(low_level_path) )
@@ -248,8 +253,9 @@ class PathSectionFinder:
                         [self.end_node],
                         initial_dir = self.initial_dir, min_height = self.min_height,
                         return_debug_info = True )
-                self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
-                        self.nav_mesh.nodes )
+                if self.debug_display_active:
+                    self.debug_display_node = debug_utils.display_debug_info( node_debug_info,
+                            self.nav_mesh.nodes )
 
             self.last_section_found = True   # Stop iteration after this
 

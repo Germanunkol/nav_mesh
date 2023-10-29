@@ -79,17 +79,14 @@ class NavZoneInterface():
     
     def calculate_entrances( self ):
         
-        print(f"Searching for entrances between zones {self.interface_id}")
-        if self.interface_id == "(156, 162)":
-            print("==========================================\nDEBUG!")
         self.entrances = []
         
         nodes = self.nodes.copy()       # Will get modified, so make a copy!
         
-        for n in nodes:
-            print(n.index, n.zone_id)
-            print( "\tsame level", [neigh.index for neigh in n.direct_neighbors])
-            print( "\tnext level", [neigh.index for neigh in n.next_level_neighbors])
+#        for n in nodes:
+#            print(n.index, n.zone_id)
+#            print( "\tsame level", [neigh.index for neigh in n.direct_neighbors])
+#            print( "\tnext level", [neigh.index for neigh in n.next_level_neighbors])
 
         while len(nodes) > 0:
             
@@ -98,7 +95,7 @@ class NavZoneInterface():
             front = [node]
             entrance_nodes = []
             
-            print("start node:", node.index)
+            #print("start node:", node.index)
             
             # Find other vertices belonging to the same entrance:
             while len( front ) > 0:
@@ -108,23 +105,23 @@ class NavZoneInterface():
                 
                 to_remove = set()         # New neighbors which are to be added to the front
                 for neighbor in node.direct_neighbors:
-                    print("direct neighbor:", neighbor.index)
+                    #print("direct neighbor:", neighbor.index)
                     if neighbor in nodes:
-                        print("\tin")
+                        #print("\tin")
                         front.append( neighbor )
                         to_remove.add( neighbor )
                 for neighbor in node.next_level_neighbors:
-                    print("next_level neighbor:", neighbor.index)
+                    #print("next_level neighbor:", neighbor.index)
                     if neighbor in nodes:
-                        print("\tin")
+                        #print("\tin")
                         front.append( neighbor )
                         to_remove.add( neighbor )
                 
                 for n in to_remove:
                     nodes.remove( n )
                 
-            print(f"\tFound entrance, num verts: {len(entrance_nodes)}")
-            print("\t", [n.index for n in entrance_nodes])
+            #print(f"\tFound entrance, num verts: {len(entrance_nodes)}")
+            #print("\t", [n.index for n in entrance_nodes])
             self.entrances.append( nav_zone_entrance.NavZoneEntrance( self.interface_id[0], self.interface_id[1], entrance_nodes ) )
             if len( entrance_nodes ) == 1 and len(self.nodes) == 3:
                 dsa = adre
@@ -207,6 +204,7 @@ def create_nav_mesh( nodes, num_zones, zone_heights ):
             entrance.node.add_direct_neighbor( zone_2.node )
             
             nav.add_entrance( entrance )
+            nav_mesh_factory_utils.entrance_to_mesh(entrance)
             
     return nav
 
@@ -277,33 +275,49 @@ def add_skip_connections( obj ):
     # Get a BMesh representation
     bm = bmesh.new()   # create an empty BMesh
     bm.from_mesh(obj.data)   # fill it in from a Mesh
-    
-    offset_positions = {}
-    for v in bm.verts:
-        # Offset by 10 cm:
-        o = v.co + v.normal*0.1
-        
-        # Store this offset position for later use
-        offset_positions[v.index] = o
         
     num_edges = len( bm.edges )
     potential_connections = {}
+    
+    def get_neighbor_faces( face ):
+        faces = set()
+        for e in face.edges:
+            for f in e.link_faces:
+                faces.add( f )
+        return faces
+    
+    def find_neighbor_faces_with_similar_normal( v, ang_thresh = math.pi*0.07, max_jumps = 2 ):
+        selected_faces = set()      # using set ensures unique entries
+        closed_set = set()
+        jumps = {}
+        open_set = set()
+        base_normals = []
+        for face in v.link_faces:
+            open_set.add(face)
+            jumps[face] = 0
+            base_normals.append(face.normal.normalized())
+            selected_faces.add(face)
+        
+        while len(open_set) > 0:
+            o = open_set.pop()
+            closed_set.add(o)
+            if jumps[o] < max_jumps:
+                for f in get_neighbor_faces( o ):
+                    if not f in closed_set:
+                        normal = o.normal.normalized()
+                        ang = min([normal.angle(bn) for bn in base_normals])
+                        if ang < ang_thresh:
+                            open_set.add(f)
+                            jumps[f] = jumps[o] + 1
+                            selected_faces.add(f)
+        return selected_faces
         
     for v in bm.verts:
         pot_conn = set()
-        if v.normal.length < 1e-10:
-            continue
-        for n in nav_mesh_factory_utils.get_neighbor_verts( v ):    
-            if n.normal.length < 1e-10:
-                continue
-            ang = v.normal.angle( n.normal )
-            if ang < math.pi*0.1:            
-                for n2 in nav_mesh_factory_utils.get_neighbor_verts( n ):
-                    if n2.normal.length < 1e-10:
-                        continue
-                    ang2 = v.normal.angle( n2.normal )
-                    if ang2 < math.pi*0.1:
-                        pot_conn.add( n2 )
+        faces =  find_neighbor_faces_with_similar_normal( v )
+        for f in faces:
+            for vert in f.verts:
+                pot_conn.add(vert)
         potential_connections[v] = pot_conn
                         
     for v, pot_conn in potential_connections.items():
@@ -312,7 +326,7 @@ def add_skip_connections( obj ):
                 bm.edges.new( (v, p) )
             except:
                 pass
-    print( "Added {len(bm.edges) - num_edges} new connections" )
+    print( f"Added {len(bm.edges) - num_edges} new connections" )
     
     bm.to_mesh(obj.data)
     
@@ -339,6 +353,10 @@ def verts_to_nodes( verts, assigned_zone_ids, heights ):
 
     
 def nav_mesh_from_object( obj ):
+    
+    print("====================================")
+    print("BUILDING NAV MESH FROM:", obj)
+    print("====================================")
     obj = nav_mesh_factory_utils.duplicate_object( obj, "NavMesh_source" )
     add_skip_connections( obj )
     me = obj.data
@@ -349,13 +367,14 @@ def nav_mesh_from_object( obj ):
     
     
     heights = nav_mesh_factory_utils.calculate_max_node_heights( bm )
-    nav_mesh_factory_utils.visualize_max_node_heights( bm, heights )
+    #nav_mesh_factory_utils.visualize_max_node_heights( bm, heights )
     
     #heights = nav_mesh_factory_utils.smooth_max_node_heights( bm, heights )
     #nav_mesh_factory_utils.visualize_max_node_heights( bm, heights, "MaxNodeHeights_Smooth" )
     
     assigned_zone_ids, zone_heights = size_clustering.split_zones_by_height( bm, heights )
     num_zones = len(zone_heights)
+    print(f"Split mesh into {num_zones} navigation zones.")
     
     #assigned_zones, num_zones = cube_clustering.split_non_connected_zones( bm, assigned_zones )
     
@@ -364,7 +383,14 @@ def nav_mesh_from_object( obj ):
     nav_mesh = create_nav_mesh( nodes, num_zones, zone_heights )
     create_high_level_mesh( nav_mesh )
     
+    #visualize_max_node_heights( nav_mesh )
+    
+    print("BUILDING DEBUG MESH")
+    nav_mesh_factory_utils.visualize_low_level_nav_mesh( nav_mesh )
+    
     #debug_objs = clustering_utils.create_debug_meshes( bm, assigned_zone_ids, num_zones )
+    #for i, zone in nav_mesh.zones.items():
+    #    nav_mesh_factory_utils.zone_to_mesh(zone)
     bm.free()    
     
     #test_nav_mesh( nav_mesh )
@@ -383,20 +409,3 @@ def nav_mesh_from_object( obj ):
 
     return nav_mesh
 
-if __name__ == "__main__":
-    
-    obj = bpy.context.object
-    nav_mesh = nav_mesh_from_object( obj )
-    
-    num_runs = 1
-
-    for i in range(num_runs):
-        # Test A* path finding:
-        start_node = nav_mesh.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
-        end_node = nav_mesh.nodes[ random.randint(0,len(nav_mesh.nodes)-1) ]
-    
-        high_level_path, low_level_path = nav_mesh.find_full_path( start_node, end_node )
-    
-        path_to_mesh( high_level_path )
-        path_to_mesh( low_level_path )
-        
