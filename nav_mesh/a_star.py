@@ -150,7 +150,7 @@ def a_star( start_node, end_nodes, verbose=False, max_end_nodes=2, avoid=[], min
                    
                     if use_angular_penalty:
                         angle_penalty = cur_node.angle_penalty(
-                                neighbor_node, initial_dir=dir_from_parent ) \
+                                neighbor_node, initial_dir=dir_from_parent )
 
                     #angle_penalty = 0   # DEBUG!
                     neighbor_node.set_parent( cur_node, angle_penalty ) 

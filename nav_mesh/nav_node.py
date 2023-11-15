@@ -137,12 +137,13 @@ class NavNode( SimpleNavNode ):
         # Let the angle between these determine the penalty: Small angles are penalized most:
         dist_from_parent = np.linalg.norm( from_parent )
         dist_to_other = np.linalg.norm( to_other )
+        assert dist_from_parent > 0, initial_dir
         if dist_from_parent > 0 and dist_to_other > 0:
             dot = np.dot( from_parent, to_other )/(dist_from_parent*dist_to_other)
             dot = max( -1, min( dot, 1 ) )  # Only necessary for the occasional numerical imprecision
             ang = math.acos( dot )
-            if ang > max_ang:
-                return 1000*ang # Make it very expensive to use this steep ang (but not impossible)
+            #if ang > max_ang:
+            return 50*ang # Make it very expensive to use this steep ang (but not impossible)
         return 0    # Fallback
     
     def __str__( self ):
