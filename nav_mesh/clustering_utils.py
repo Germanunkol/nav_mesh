@@ -2,7 +2,7 @@ import bpy
 from mathutils import Vector
 
 
-import utils
+import src.utils as utils
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp

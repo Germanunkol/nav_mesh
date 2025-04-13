@@ -178,8 +178,9 @@ class NavMesh():
 
         print("Attempting to load NavMesh from file:", filename)
         with open( filename, "rb" ) as f:
-            #nav_mesh = pickle.load( f )
-            nav_mesh = loader.renamed_load( f, "lib.nav_mesh", "lib.pathfinding" )
+            nav_mesh = pickle.load( f )
+            #nav_mesh = loader.renamed_load( f, "nav_mesh", "lib.pathfinding" )
+            #nav_mesh = loader.renamed_load( f, "nav_mesh", "lib.pathfinding" )
             print( "\tNavMesh loaded." )
         return nav_mesh
 

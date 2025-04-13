@@ -14,7 +14,7 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append(dir)
 
-import utils
+import src.utils as utils
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
